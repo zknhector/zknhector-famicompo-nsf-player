@@ -45,7 +45,7 @@ int nsf_bridge_play(gme_bridge_handle* h, int16_t* out, int sample_count) {
 
 void nsf_bridge_stop(gme_bridge_handle* h) {
     if (!h || !h->emu) return;
-    gme_stop(h->emu);
+    
 }
 
 void nsf_bridge_delete(gme_bridge_handle* h) {
