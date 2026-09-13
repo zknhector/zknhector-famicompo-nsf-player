@@ -1,0 +1,260 @@
+/* 
+ Chromebook-Famicompo-NSF-Player
+ style.css
+*/
+
+
+body {
+
+    margin:0;
+
+    padding:0;
+
+    font-family:
+        "Noto Sans JP",
+        Arial,
+        sans-serif;
+
+    background:#111;
+
+    color:#eee;
+
+}
+
+
+
+header {
+
+    background:#222;
+
+    padding:20px;
+
+    text-align:center;
+
+    border-bottom:
+        4px solid #555;
+
+}
+
+
+
+h1 {
+
+    margin:0;
+
+    font-size:28px;
+
+}
+
+
+
+main {
+
+    max-width:900px;
+
+    margin:auto;
+
+    padding:20px;
+
+}
+
+
+
+section {
+
+    background:#1b1b1b;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    margin-bottom:20px;
+
+    box-shadow:
+        0 0 10px #000;
+
+}
+
+
+
+/* ドロップエリア */
+
+#drop-area {
+
+    text-align:center;
+
+    border:
+        3px dashed #777;
+
+}
+
+
+
+#drop-area.dragover {
+
+    background:#333;
+
+    border-color:#fff;
+
+}
+
+
+
+input[type=file] {
+
+    margin-top:15px;
+
+    font-size:18px;
+
+}
+
+
+
+/* ライブラリ */
+
+#song-list {
+
+    list-style:none;
+
+    padding:0;
+
+    margin:0;
+
+}
+
+
+
+#song-list li {
+
+    padding:15px;
+
+    margin-bottom:8px;
+
+    background:#292929;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+}
+
+
+
+#song-list li:hover {
+
+    background:#444;
+
+}
+
+
+
+/* 情報表示 */
+
+#info span {
+
+    color:#7ee7ff;
+
+}
+
+
+
+/* プレイヤー */
+
+#player {
+
+    text-align:center;
+
+}
+
+
+
+button {
+
+    width:70px;
+
+    height:55px;
+
+    margin:5px;
+
+    font-size:22px;
+
+    border-radius:10px;
+
+    border:none;
+
+    background:#333;
+
+    color:white;
+
+}
+
+
+
+button:hover {
+
+    background:#555;
+
+}
+
+
+
+button:active {
+
+    transform:scale(0.95);
+
+}
+
+
+
+input[type=range] {
+
+    width:70%;
+
+}
+
+
+
+/* フッター */
+
+footer {
+
+    text-align:center;
+
+    padding:20px;
+
+    color:#999;
+
+}
+
+
+
+/* Chromebook縦画面対応 */
+
+@media(max-width:600px){
+
+
+    h1 {
+
+        font-size:22px;
+
+    }
+
+
+    button {
+
+        width:60px;
+
+        height:50px;
+
+    }
+
+
+    section {
+
+        padding:15px;
+
+    }
+
+}
