@@ -1,74 +1,124 @@
-#include <stdint.h>
 #include <stdlib.h>
-#include "gme.h"
+#include <string.h>
 
-/*
- * Small stable C ABI for the browser.
- * libgme remains responsible for NSF/NSFe emulation and expansion chips.
- */
+#include "gme.h"
 
 typedef struct {
     Music_Emu* emu;
-    int track_count;
-} gme_bridge_handle;
+} BridgeHandle;
 
-int nsf_bridge_open(const uint8_t* data, int size, gme_bridge_handle** out) {
-    if (!data || size <= 0 || !out) return -1;
+static BridgeHandle* get_handle(int handle) {
+    return (BridgeHandle*)(intptr_t)handle;
+}
 
-    gme_bridge_handle* h = (gme_bridge_handle*)calloc(1, sizeof(*h));
-    if (!h) return -2;
+int nsf_bridge_open(const void* data, int size) {
+    BridgeHandle* h;
+    gme_err_t err;
 
-    gme_err_t err = gme_open_data(data, size, &h->emu, 48000);
-    if (err) {
-        free(h);
-        return -3;
+    if (!data || size <= 0) {
+        return 0;
     }
 
-    h->track_count = gme_track_count(h->emu);
-    *out = h;
-    return 0;
+    h = (BridgeHandle*)malloc(sizeof(BridgeHandle));
+    if (!h) {
+        return 0;
+    }
+
+    h->emu = NULL;
+
+    err = gme_open_data(data, size, &h->emu, 48000);
+
+    if (err) {
+        free(h);
+        return 0;
+    }
+
+    return (int)(intptr_t)h;
 }
 
-int nsf_bridge_track_count(gme_bridge_handle* h) {
-    return h ? h->track_count : 0;
+int nsf_bridge_track_count(int handle) {
+    BridgeHandle* h = get_handle(handle);
+
+    if (!h || !h->emu) {
+        return 0;
+    }
+
+    return gme_track_count(h->emu);
 }
 
-int nsf_bridge_start(gme_bridge_handle* h, int track) {
-    if (!h || !h->emu) return -1;
-    return gme_start_track(h->emu, track);
+int nsf_bridge_start(int handle, int track) {
+    BridgeHandle* h = get_handle(handle);
+    gme_err_t err;
+
+    if (!h || !h->emu) {
+        return 0;
+    }
+
+    err = gme_start_track(h->emu, track);
+
+    return err ? 0 : 1;
 }
 
-int nsf_bridge_play(gme_bridge_handle* h, int16_t* out, int sample_count) {
-    if (!h || !h->emu || !out || sample_count <= 0) return -1;
-    return gme_play(h->emu, sample_count, out);
+int nsf_bridge_play(int handle, int sample_count, short* out) {
+    BridgeHandle* h = get_handle(handle);
+    gme_err_t err;
+
+    if (!h || !h->emu || !out || sample_count <= 0) {
+        return 0;
+    }
+
+    err = gme_play(h->emu, sample_count, out);
+
+    return err ? 0 : 1;
 }
 
-void nsf_bridge_stop(gme_bridge_handle* h) {
-    if (!h || !h->emu) return;
-    
+void nsf_bridge_stop(int handle) {
+    BridgeHandle* h = get_handle(handle);
+
+    if (!h || !h->emu) {
+        return;
+    }
+
+    /*
+     * libgme には gme_stop() がないため、
+     * 再生停止は現在のトラックを終了させる側で扱う。
+     */
 }
 
-void nsf_bridge_delete(gme_bridge_handle* h) {
-    if (!h) return;
-    if (h->emu) gme_delete(h->emu);
+void nsf_bridge_delete(int handle) {
+    BridgeHandle* h = get_handle(handle);
+
+    if (!h) {
+        return;
+    }
+
+    if (h->emu) {
+        gme_delete(h->emu);
+    }
+
     free(h);
 }
 
-/*
- * Track metadata. Returns the fields separately so JS does not need
- * to dereference a C struct layout.
- */
-int nsf_bridge_info(gme_bridge_handle* h, int track,
-                    int* length_ms, int* intro_ms, int* loop_ms) {
-    if (!h || !h->emu || !length_ms || !intro_ms || !loop_ms) return -1;
+const char* nsf_bridge_info(int handle, int track) {
+    BridgeHandle* h = get_handle(handle);
+    gme_info_t* info;
+    const char* result;
 
-    gme_info_t* info = 0;
-    gme_err_t err = gme_track_info(h->emu, &info, track);
-    if (err || !info) return -2;
+    if (!h || !h->emu) {
+        return "";
+    }
 
-    *length_ms = info->length;
-    *intro_ms = info->intro_length;
-    *loop_ms = info->loop_length;
+    info = NULL;
+
+    if (gme_track_info(h->emu, &info, track)) {
+        return "";
+    }
+
+    result = info && info->song
+        ? info->song
+        : "";
+
     gme_free_info(info);
-    return 0;
+
+    return result;
 }
