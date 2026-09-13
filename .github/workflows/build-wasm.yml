@@ -1,0 +1,52 @@
+name: Build NSF Player WASM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build zip
+
+      - name: Install Emscripten
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install latest
+          ./emsdk activate latest
+          echo "$PWD" >> "$GITHUB_PATH"
+          echo "$PWD/upstream/emscripten" >> "$GITHUB_PATH"
+
+      - name: Build libgme WASM
+        run: |
+          chmod +x tools/build-libgme-wasm.sh
+          source emsdk/emsdk_env.sh
+          ./tools/build-libgme-wasm.sh
+
+      - name: Create player ZIP
+        run: |
+          zip -r nsfplayer3-built.zip \
+            index.html \
+            manifest.json \
+            service-worker.js \
+            css \
+            icons \
+            src \
+            tools \
+            wasm \
+            *.js \
+            README.md
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nsfplayer3-built
+          path: nsfplayer3-built.zip
