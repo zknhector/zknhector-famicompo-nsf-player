@@ -54,8 +54,8 @@ em++ -O3 \
   -sENVIRONMENT=web \
   -sALLOW_MEMORY_GROWTH=1 \
   -sEXPORTED_FUNCTIONS='["_malloc","_free","_nsf_bridge_open","_nsf_bridge_track_count","_nsf_bridge_start","_nsf_bridge_play","_nsf_bridge_stop","_nsf_bridge_delete","_nsf_bridge_info"]' \
-  -sEXPORTED_RUNTIME_METHODS='["HEAPU8","HEAP16U","HEAP16","ccall","cwrap"]' \
-  -sWASM_BIGINT=1
+  -sEXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+  
 
 echo "Built:"
 ls -lh "$OUT/gme.js" "$OUT/gme.wasm"
