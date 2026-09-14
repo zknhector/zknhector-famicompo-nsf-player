@@ -39,10 +39,10 @@ jobs:
             service-worker.js \
             css \
             icons \
+            js \
             src \
             tools \
             wasm \
-            *.js \
             README.md
 
       - name: Upload build artifact
