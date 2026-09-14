@@ -12,6 +12,10 @@ static BridgeHandle* get_handle(int handle) {
     return (BridgeHandle*)(intptr_t)handle;
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int nsf_bridge_open(const void* data, int size) {
     BridgeHandle* h;
     gme_err_t err;
@@ -81,8 +85,8 @@ void nsf_bridge_stop(int handle) {
     }
 
     /*
-     * libgme には gme_stop() がないため、
-     * 再生停止は現在のトラックを終了させる側で扱う。
+     * libgmeにはgme_stop()がないため、
+     * 停止処理はJavaScript側で扱う。
      */
 }
 
@@ -115,7 +119,7 @@ const char* nsf_bridge_info(int handle, int track) {
         return "";
     }
 
-    result = info && info->song
+    result = (info && info->song)
         ? info->song
         : "";
 
@@ -123,3 +127,7 @@ const char* nsf_bridge_info(int handle, int track) {
 
     return result;
 }
+
+#ifdef __cplusplus
+}
+#endif
