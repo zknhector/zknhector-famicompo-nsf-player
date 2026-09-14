@@ -3,13 +3,22 @@ name: Build NSF Player WASM
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install dependencies
         run: |
@@ -50,3 +59,28 @@ jobs:
         with:
           name: nsfplayer3-built
           path: nsfplayer3-built.zip
+
+      - name: Prepare GitHub Pages
+        run: |
+          rm -rf pages
+          mkdir -p pages
+          cp index.html pages/
+          cp manifest.json pages/
+          cp service-worker.js pages/
+          cp -r css pages/
+          cp -r icons pages/
+          cp -r js pages/
+          cp -r wasm pages/
+          touch pages/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
