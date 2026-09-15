@@ -1,21 +1,23 @@
 /*
  Chromebook-Famicompo-NSF-Player
 
- libgme-bridge.js v0.8
+ gme-core.js v1.0
 
- libgme WebAssembly 接続層
+ libgme core interface
 
 */
 
 
-const LibGME = {
+const GMECore = {
 
-
-    ready:false,
 
     module:null,
 
-    handle:null,
+    emulator:null,
+
+    ready:false,
+
+
 
 
 
@@ -27,7 +29,7 @@ const LibGME = {
 
 
         console.log(
-            "Initializing libgme..."
+            "GME Core initialize"
         );
 
 
@@ -47,19 +49,21 @@ const LibGME = {
 
 
             console.log(
-                "libgme ready"
+                "GME Core ready"
             );
 
 
             return true;
+
 
         }
 
 
 
         console.warn(
-            "libgme module not loaded"
+            "Emscripten Module waiting"
         );
+
 
 
         return false;
@@ -71,116 +75,123 @@ const LibGME = {
 
 
 
+
+
+
     /*
       NSFオープン
+
     */
 
     open(buffer){
 
 
-        if(!this.ready){
+
+        if(
+            !this.ready
+        ){
+
 
             console.warn(
-                "libgme not ready"
+                "GME not ready"
             );
 
-            return null;
+
+            return false;
 
         }
 
 
 
+
+        /*
+          本接続予定:
+
+          gme_open_data(
+             data,
+             length,
+             &emu
+          )
+
+        */
+
+
+
+        this.emulator =
+        {
+
+            data:buffer,
+
+            track:0
+
+
+        };
+
+
+
         console.log(
-            "Opening NSF",
-            buffer.byteLength
+            "NSF opened"
         );
 
 
 
-        /*
-          実装予定:
-
-          gme_open_data()
-
-        */
-
-
-
-        this.handle =
-        {
-
-            buffer:buffer
-
-
-        };
-
-
-
-        return this.handle;
+        return true;
 
 
     },
+
+
+
 
 
 
 
 
     /*
-      トラック数
+      トラック開始
 
     */
 
-    getTrackCount(){
+    startTrack(track){
+
+
+
+        if(
+            !this.emulator
+        ){
+
+            return false;
+
+        }
+
+
+
+        this.emulator.track =
+            track;
+
 
 
         /*
-          gme_track_count()
+          gme_start_track()
 
         */
 
 
-        return 1;
+
+        console.log(
+            "Track start",
+            track
+        );
+
+
+
+        return true;
 
 
     },
 
 
 
-
-
-    /*
-      曲情報
-
-    */
-
-    getTrackInfo(track){
-
-
-        /*
-          gme_track_info()
-
-        */
-
-
-        return {
-
-
-            title:
-                "Unknown",
-
-
-            author:
-                "Unknown",
-
-
-            system:
-                "NES"
-
-
-        };
-
-
-    },
 
 
 
@@ -191,7 +202,8 @@ const LibGME = {
 
     */
 
-    play(samples){
+    getSamples(length){
+
 
 
         /*
@@ -200,9 +212,33 @@ const LibGME = {
         */
 
 
+
         return new Int16Array(
-            samples
+            length
         );
+
+
+    },
+
+
+
+
+
+
+
+
+    /*
+      停止
+
+    */
+
+    stop(){
+
+
+
+        this.emulator =
+            null;
+
 
 
     }
@@ -215,5 +251,7 @@ const LibGME = {
 
 
 
-window.LibGME =
-    LibGME;
+
+
+window.GMECore =
+    GMECore;
