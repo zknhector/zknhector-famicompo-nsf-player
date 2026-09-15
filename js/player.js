@@ -1,16 +1,8 @@
-/*
- Chromebook-Famicompo-NSF-Player
-
- player.js v0.7
-
- NSF Player
-*/
-
-
 const NSFPlayer = {
   currentSong: null,
   playing: false,
   volume: 0.8,
+
   audioContext: null,
   gainNode: null,
   workletNode: null,
@@ -31,13 +23,14 @@ const NSFPlayer = {
 
   async load(song) {
     await this.init();
+
     this.stop();
 
     this.currentSong = song;
 
-    await NSFEngine.load(
-      await song.file.arrayBuffer()
-    );
+    const buffer = await song.file.arrayBuffer();
+
+    await NSFEngine.load(buffer);
   },
 
   createAudio() {
@@ -52,7 +45,10 @@ const NSFPlayer = {
   },
 
   async play() {
-    if (!this.currentSong) return false;
+    if (!this.currentSong) {
+      console.error("No song selected");
+      return false;
+    }
 
     await this.init();
 
@@ -66,6 +62,7 @@ const NSFPlayer = {
     }
 
     this.playing = true;
+
     this.pump();
 
     return true;
@@ -75,10 +72,6 @@ const NSFPlayer = {
     if (!this.playing || !this.workletNode) return;
 
     try {
-      /*
-       * libgme produces stereo-interleaved samples.
-       * 2048 frames = 4096 int16 samples.
-       */
       const pcm = NSFEngine.getFloatPCM(2048);
 
       if (pcm.length > 0) {
@@ -91,7 +84,11 @@ const NSFPlayer = {
       requestAnimationFrame(() => this.pump());
 
     } catch (error) {
-      console.error("NSF audio pump failed:", error);
+      console.error(
+        "NSF audio pump failed:",
+        error
+      );
+
       this.playing = false;
     }
   },
@@ -116,6 +113,12 @@ const NSFPlayer = {
   },
 
   getInfo() {
+    if (
+      typeof NSFEngine === "undefined"
+    ) {
+      return {};
+    }
+
     return NSFEngine.getInfo() || {};
   }
 };
