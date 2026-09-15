@@ -1,14 +1,4 @@
-/*
- Chromebook-Famicompo-NSF-Player
-
- gme-core.js v1.0
-
- libgme core interface
-
-*/
-
-
-const GMECore = {
+window.GMECore = window.GMECore || {
   ready: false,
 
   async init() {
@@ -50,5 +40,3 @@ const GMECore = {
     GMELoader.close();
   }
 };
-
-window.GMECore = GMECore;
