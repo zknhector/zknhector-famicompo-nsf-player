@@ -1,63 +1,206 @@
-const NSFPlayer = {
-  currentSong: null,
-  playing: false,
-  volume: 0.8,
-  audioContext: null,
-  gainNode: null,
-  workletNode: null,
+/*
+ * Chromebook-Famicompo-NSF-Player
+ *
+ * service-worker.js v0.2
+ *
+ * PWA cache manager
+ *
+ * - Application shell caching
+ * - WASM asset caching
+ * - Cache version management
+ * - Offline fallback
+ */
 
-  async init() {
-    if (this.audioContext) return;
-    this.audioContext = new AudioContext();
-    this.gainNode = this.audioContext.createGain();
-    this.gainNode.gain.value = this.volume;
-    this.gainNode.connect(this.audioContext.destination);
-    await this.audioContext.audioWorklet.addModule("js/audio-worker.js");
-  },
+const CACHE_NAME = "famicompo-nsf-player-v0.2";
 
-  async load(song) {
-    await this.init();
-    this.stop();
-    this.currentSong = song;
-    await NSFEngine.load(await song.file.arrayBuffer());
-  },
+const APP_FILES = [
+    "./",
+    "./index.html",
+    "./manifest.json",
 
-  createAudio() {
-    if (this.workletNode) return;
-    this.workletNode = new AudioWorkletNode(this.audioContext, "nsf-audio");
-    this.workletNode.connect(this.gainNode);
-  },
+    "./css/style.css",
 
-  async play() {
-    if (!this.currentSong) return false;
-    await this.init();
-    await this.audioContext.resume();
-    this.createAudio();
-    if (!NSFEngine.start()) return false;
-    this.playing = true;
-    this.pump();
-    return true;
-  },
+    "./js/app.js",
+    "./js/library.js",
+    "./js/player.js",
+    "./js/audio-worker.js",
 
-  pump() {
-    if (!this.playing || !this.workletNode) return;
-    const pcm = NSFEngine.getFloatPCM(2048);
-    this.workletNode.port.postMessage(pcm, [pcm.buffer]);
-    requestAnimationFrame(() => this.pump());
-  },
+    "./js/gme-loader.js",
+    "./js/gme-core.js",
+    "./js/libgme-bridge.js",
+    "./js/nsf-parser.js",
+    "./js/nsf-engine.js"
+];
 
-  stop() {
-    this.playing = false;
-    if (NSFEngine) NSFEngine.stop();
-  },
 
-  setVolume(value) {
-    this.volume = Math.max(0, Math.min(1, Number(value) / 100));
-    if (this.gainNode) this.gainNode.gain.value = this.volume;
-  },
+/*
+ * Install
+ */
 
-  getInfo() {
-    return NSFEngine.getInfo() || {};
-  }
-};
-window.NSFPlayer = NSFPlayer;
+self.addEventListener("install", (event) => {
+
+    event.waitUntil(
+
+        caches.open(CACHE_NAME)
+
+            .then((cache) => {
+
+                return cache.addAll(APP_FILES);
+
+            })
+
+            .then(() => {
+
+                return self.skipWaiting();
+
+            })
+
+    );
+
+});
+
+
+
+/*
+ * Activate
+ */
+
+self.addEventListener("activate", (event) => {
+
+    event.waitUntil(
+
+        caches.keys()
+
+            .then((cacheNames) => {
+
+                return Promise.all(
+
+                    cacheNames.map((cacheName) => {
+
+                        if (
+                            cacheName !== CACHE_NAME
+                        ) {
+
+                            return caches.delete(
+                                cacheName
+                            );
+
+                        }
+
+                        return undefined;
+
+                    })
+
+                );
+
+            })
+
+            .then(() => {
+
+                return self.clients.claim();
+
+            })
+
+    );
+
+});
+
+
+
+/*
+ * Fetch
+ *
+ * Application files:
+ * cache first
+ *
+ * Other resources:
+ * network first
+ */
+
+self.addEventListener("fetch", (event) => {
+
+    const request = event.request;
+
+    if (request.method !== "GET") {
+
+        return;
+
+    }
+
+
+    const url = new URL(request.url);
+
+
+    /*
+     * Same-origin resources
+     */
+
+    if (url.origin === self.location.origin) {
+
+        event.respondWith(
+
+            caches.match(request)
+
+                .then((cachedResponse) => {
+
+                    if (cachedResponse) {
+
+                        return cachedResponse;
+
+                    }
+
+
+                    return fetch(request)
+
+                        .then((response) => {
+
+                            if (
+                                response &&
+                                response.status === 200
+                            ) {
+
+                                const responseClone =
+                                    response.clone();
+
+                                caches.open(CACHE_NAME)
+                                    .then((cache) => {
+
+                                        cache.put(
+                                            request,
+                                            responseClone
+                                        );
+
+                                    });
+
+                            }
+
+                            return response;
+
+                        });
+
+                })
+
+        );
+
+        return;
+
+    }
+
+
+    /*
+     * External resources
+     */
+
+    event.respondWith(
+
+        fetch(request)
+
+            .catch(() => {
+
+                return caches.match(request);
+
+            })
+
+    );
+
+});
