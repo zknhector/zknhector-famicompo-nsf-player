@@ -1,206 +1,348 @@
 /*
- * Chromebook-Famicompo-NSF-Player
- *
- * service-worker.js v0.2
- *
- * PWA cache manager
- *
- * - Application shell caching
- * - WASM asset caching
- * - Cache version management
- * - Offline fallback
- */
+ Chromebook-Famicompo-NSF-Player
 
-const CACHE_NAME = "famicompo-nsf-player-v0.2";
+ nsf-engine.js v1.1
 
-const APP_FILES = [
-    "./",
-    "./index.html",
-    "./manifest.json",
+ NSF Engine
 
-    "./css/style.css",
+ - GMECore v1.0 connection
+ - Track control
+ - PCM streaming
+ - Metadata handling
 
-    "./js/app.js",
-    "./js/library.js",
-    "./js/player.js",
-    "./js/audio-worker.js",
-
-    "./js/gme-loader.js",
-    "./js/gme-core.js",
-    "./js/libgme-bridge.js",
-    "./js/nsf-parser.js",
-    "./js/nsf-engine.js"
-];
+*/
 
 
-/*
- * Install
- */
+const NSFEngine = {
 
-self.addEventListener("install", (event) => {
 
-    event.waitUntil(
+    ready:false,
 
-        caches.open(CACHE_NAME)
+    playing:false,
 
-            .then((cache) => {
 
-                return cache.addAll(APP_FILES);
+    currentTrack:0,
 
-            })
+    trackCount:0,
 
-            .then(() => {
 
-                return self.skipWaiting();
-
-            })
-
-    );
-
-});
+    info:null,
 
 
 
-/*
- * Activate
- */
-
-self.addEventListener("activate", (event) => {
-
-    event.waitUntil(
-
-        caches.keys()
-
-            .then((cacheNames) => {
-
-                return Promise.all(
-
-                    cacheNames.map((cacheName) => {
-
-                        if (
-                            cacheName !== CACHE_NAME
-                        ) {
-
-                            return caches.delete(
-                                cacheName
-                            );
-
-                        }
-
-                        return undefined;
-
-                    })
-
-                );
-
-            })
-
-            .then(() => {
-
-                return self.clients.claim();
-
-            })
-
-    );
-
-});
-
-
-
-/*
- * Fetch
- *
- * Application files:
- * cache first
- *
- * Other resources:
- * network first
- */
-
-self.addEventListener("fetch", (event) => {
-
-    const request = event.request;
-
-    if (request.method !== "GET") {
-
-        return;
-
-    }
-
-
-    const url = new URL(request.url);
 
 
     /*
-     * Same-origin resources
-     */
+      初期化
 
-    if (url.origin === self.location.origin) {
+    */
 
-        event.respondWith(
-
-            caches.match(request)
-
-                .then((cachedResponse) => {
-
-                    if (cachedResponse) {
-
-                        return cachedResponse;
-
-                    }
+    async init(){
 
 
-                    return fetch(request)
+        await GMECore.init();
 
-                        .then((response) => {
 
-                            if (
-                                response &&
-                                response.status === 200
-                            ) {
 
-                                const responseClone =
-                                    response.clone();
+        this.ready =
+            GMECore.ready;
 
-                                caches.open(CACHE_NAME)
-                                    .then((cache) => {
 
-                                        cache.put(
-                                            request,
-                                            responseClone
-                                        );
 
-                                    });
-
-                            }
-
-                            return response;
-
-                        });
-
-                })
-
+        console.log(
+            "NSF Engine ready:",
+            this.ready
         );
 
-        return;
+
+        return this.ready;
+
+
+    },
+
+
+
+
+
+
+
+
+
+    /*
+      NSFロード
+
+    */
+
+    async load(buffer){
+
+
+
+        if(
+            !this.ready
+        ){
+
+            await this.init();
+
+        }
+
+
+
+        const result =
+            GMECore.open(
+                buffer
+            );
+
+
+
+        if(
+            !result
+        ){
+
+            console.error(
+                "NSF open failed"
+            );
+
+
+            return false;
+
+        }
+
+
+
+
+
+        this.trackCount =
+            1;
+
+
+
+        this.currentTrack =
+            0;
+
+
+
+        this.info =
+            NSFParser.parse(
+                buffer
+            );
+
+
+
+        console.log(
+            "NSF loaded",
+            this.info
+        );
+
+
+
+        return true;
+
+
+    },
+
+
+
+
+
+
+
+
+
+    /*
+      再生開始
+
+    */
+
+    start(){
+
+
+
+        GMECore.startTrack(
+            this.currentTrack
+        );
+
+
+
+        this.playing =
+            true;
+
+
+
+    },
+
+
+
+
+
+
+
+
+
+    /*
+      停止
+
+    */
+
+    stop(){
+
+
+
+        this.playing =
+            false;
+
+
+
+        GMECore.stop();
+
+
+
+    },
+
+
+
+
+
+
+
+
+
+    /*
+      トラック変更
+
+    */
+
+    setTrack(track){
+
+
+
+        this.currentTrack =
+            track;
+
+
+
+        GMECore.startTrack(
+            track
+        );
+
+
+
+        return true;
+
+
+    },
+
+
+
+
+
+
+
+
+
+    /*
+      情報取得
+
+    */
+
+    getInfo(){
+
+
+
+        return this.info ||
+        {
+
+
+            title:
+            "Unknown",
+
+
+            artist:
+            "Unknown",
+
+
+            chip:
+            "2A03"
+
+
+        };
+
+
+    },
+
+
+
+
+
+
+
+
+
+    /*
+      PCM取得
+
+    */
+
+    getFloatPCM(size){
+
+
+
+        if(
+            !this.playing
+        ){
+
+            return new Float32Array(
+                size
+            );
+
+        }
+
+
+
+
+
+        const pcm =
+            GMECore.getSamples(
+                size
+            );
+
+
+
+        const output =
+            new Float32Array(
+                pcm.length
+            );
+
+
+
+        for(
+            let i=0;
+            i<pcm.length;
+            i++
+        ){
+
+
+            output[i] =
+                pcm[i] / 32768;
+
+
+        }
+
+
+
+        return output;
+
 
     }
 
 
-    /*
-     * External resources
-     */
 
-    event.respondWith(
 
-        fetch(request)
 
-            .catch(() => {
+};
 
-                return caches.match(request);
 
-            })
 
-    );
 
-});
+
+window.NSFEngine =
+    NSFEngine;
