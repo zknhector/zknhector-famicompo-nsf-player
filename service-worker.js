@@ -1,17 +1,13 @@
 /*
  * Chromebook-Famicompo-NSF-Player
  *
- * service-worker.js v0.2
+ * service-worker.js v0.3
  *
- * PWA cache manager
- *
- * - Application shell caching
- * - WASM asset caching
- * - Cache version management
- * - Offline fallback
+ * Cache version bumped so browsers discard the old
+ * JavaScript files after the audio ABI fix.
  */
 
-const CACHE_NAME = "famicompo-nsf-player-v0.2";
+const CACHE_NAME = "famicompo-nsf-player-v0.3";
 
 const APP_FILES = [
     "./",
@@ -34,175 +30,56 @@ const APP_FILES = [
     "./js/nsf-engine.js"
 ];
 
-
-/*
- * Install
- */
-
 self.addEventListener("install", (event) => {
-
     event.waitUntil(
-
         caches.open(CACHE_NAME)
-
-            .then((cache) => {
-
-                return cache.addAll(APP_FILES);
-
-            })
-
-            .then(() => {
-
-                return self.skipWaiting();
-
-            })
-
+            .then((cache) => cache.addAll(APP_FILES))
+            .then(() => self.skipWaiting())
     );
-
 });
-
-
-
-/*
- * Activate
- */
 
 self.addEventListener("activate", (event) => {
-
     event.waitUntil(
-
         caches.keys()
-
-            .then((cacheNames) => {
-
-                return Promise.all(
-
-                    cacheNames.map((cacheName) => {
-
-                        if (
-                            cacheName !== CACHE_NAME
-                        ) {
-
-                            return caches.delete(
-                                cacheName
-                            );
-
-                        }
-
-                        return undefined;
-
-                    })
-
-                );
-
-            })
-
-            .then(() => {
-
-                return self.clients.claim();
-
-            })
-
+            .then((cacheNames) => Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                    return undefined;
+                })
+            ))
+            .then(() => self.clients.claim())
     );
-
 });
 
-
-
-/*
- * Fetch
- *
- * Application files:
- * cache first
- *
- * Other resources:
- * network first
- */
-
 self.addEventListener("fetch", (event) => {
-
     const request = event.request;
 
-    if (request.method !== "GET") {
-
-        return;
-
-    }
-
+    if (request.method !== "GET") return;
 
     const url = new URL(request.url);
 
-
-    /*
-     * Same-origin resources
-     */
-
     if (url.origin === self.location.origin) {
-
         event.respondWith(
-
             caches.match(request)
-
                 .then((cachedResponse) => {
+                    if (cachedResponse) return cachedResponse;
 
-                    if (cachedResponse) {
-
-                        return cachedResponse;
-
-                    }
-
-
-                    return fetch(request)
-
-                        .then((response) => {
-
-                            if (
-                                response &&
-                                response.status === 200
-                            ) {
-
-                                const responseClone =
-                                    response.clone();
-
-                                caches.open(CACHE_NAME)
-                                    .then((cache) => {
-
-                                        cache.put(
-                                            request,
-                                            responseClone
-                                        );
-
-                                    });
-
-                            }
-
-                            return response;
-
-                        });
-
+                    return fetch(request).then((response) => {
+                        if (response && response.status === 200) {
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME)
+                                .then((cache) => cache.put(request, clone));
+                        }
+                        return response;
+                    });
                 })
-
         );
-
         return;
-
     }
 
-
-    /*
-     * External resources
-     */
-
     event.respondWith(
-
-        fetch(request)
-
-            .catch(() => {
-
-                return caches.match(request);
-
-            })
-
+        fetch(request).catch(() => caches.match(request))
     );
-
 });
