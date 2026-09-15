@@ -1,32 +1,21 @@
 /*
  Chromebook-Famicompo-NSF-Player
 
- nsf-engine.js v1.1
+ gme-core.js v1.0
 
- NSF Engine
-
- - GMECore v1.0 connection
- - Track control
- - PCM streaming
- - Metadata handling
+ libgme core interface
 
 */
 
 
-const NSFEngine = {
+const GMECore = {
 
+
+    module:null,
+
+    emulator:null,
 
     ready:false,
-
-    playing:false,
-
-
-    currentTrack:0,
-
-    trackCount:0,
-
-
-    info:null,
 
 
 
@@ -34,28 +23,50 @@ const NSFEngine = {
 
     /*
       初期化
-
     */
 
     async init(){
 
 
-        await GMECore.init();
-
-
-
-        this.ready =
-            GMECore.ready;
-
-
-
         console.log(
-            "NSF Engine ready:",
-            this.ready
+            "GME Core initialize"
         );
 
 
-        return this.ready;
+
+        if(
+            window.Module
+        ){
+
+
+            this.module =
+                window.Module;
+
+
+
+            this.ready=true;
+
+
+
+            console.log(
+                "GME Core ready"
+            );
+
+
+            return true;
+
+
+        }
+
+
+
+        console.warn(
+            "Emscripten Module waiting"
+        );
+
+
+
+        return false;
 
 
     },
@@ -67,13 +78,12 @@ const NSFEngine = {
 
 
 
-
     /*
-      NSFロード
+      NSFオープン
 
     */
 
-    async load(buffer){
+    open(buffer){
 
 
 
@@ -81,25 +91,9 @@ const NSFEngine = {
             !this.ready
         ){
 
-            await this.init();
 
-        }
-
-
-
-        const result =
-            GMECore.open(
-                buffer
-            );
-
-
-
-        if(
-            !result
-        ){
-
-            console.error(
-                "NSF open failed"
+            console.warn(
+                "GME not ready"
             );
 
 
@@ -110,27 +104,33 @@ const NSFEngine = {
 
 
 
+        /*
+          本接続予定:
 
-        this.trackCount =
-            1;
+          gme_open_data(
+             data,
+             length,
+             &emu
+          )
+
+        */
 
 
 
-        this.currentTrack =
-            0;
+        this.emulator =
+        {
+
+            data:buffer,
+
+            track:0
 
 
-
-        this.info =
-            NSFParser.parse(
-                buffer
-            );
+        };
 
 
 
         console.log(
-            "NSF loaded",
-            this.info
+            "NSF opened"
         );
 
 
@@ -147,80 +147,39 @@ const NSFEngine = {
 
 
 
-
     /*
-      再生開始
+      トラック開始
 
     */
 
-    start(){
+    startTrack(track){
 
 
 
-        GMECore.startTrack(
-            this.currentTrack
-        );
+        if(
+            !this.emulator
+        ){
+
+            return false;
+
+        }
 
 
 
-        this.playing =
-            true;
-
-
-
-    },
-
-
-
-
-
-
-
-
-
-    /*
-      停止
-
-    */
-
-    stop(){
-
-
-
-        this.playing =
-            false;
-
-
-
-        GMECore.stop();
-
-
-
-    },
-
-
-
-
-
-
-
-
-
-    /*
-      トラック変更
-
-    */
-
-    setTrack(track){
-
-
-
-        this.currentTrack =
+        this.emulator.track =
             track;
 
 
 
-        GMECore.startTrack(
+        /*
+          gme_start_track()
+
+        */
+
+
+
+        console.log(
+            "Track start",
             track
         );
 
@@ -238,33 +197,25 @@ const NSFEngine = {
 
 
 
-
     /*
-      情報取得
+      PCM取得
 
     */
 
-    getInfo(){
+    getSamples(length){
 
 
 
-        return this.info ||
-        {
+        /*
+          gme_play()
+
+        */
 
 
-            title:
-            "Unknown",
 
-
-            artist:
-            "Unknown",
-
-
-            chip:
-            "2A03"
-
-
-        };
+        return new Int16Array(
+            length
+        );
 
 
     },
@@ -276,60 +227,18 @@ const NSFEngine = {
 
 
 
-
     /*
-      PCM取得
+      停止
 
     */
 
-    getFloatPCM(size){
+    stop(){
 
 
 
-        if(
-            !this.playing
-        ){
+        this.emulator =
+            null;
 
-            return new Float32Array(
-                size
-            );
-
-        }
-
-
-
-
-
-        const pcm =
-            GMECore.getSamples(
-                size
-            );
-
-
-
-        const output =
-            new Float32Array(
-                pcm.length
-            );
-
-
-
-        for(
-            let i=0;
-            i<pcm.length;
-            i++
-        ){
-
-
-            output[i] =
-                pcm[i] / 32768;
-
-
-        }
-
-
-
-        return output;
 
 
     }
@@ -344,5 +253,5 @@ const NSFEngine = {
 
 
 
-window.NSFEngine =
-    NSFEngine;
+window.GMECore =
+    GMECore;
