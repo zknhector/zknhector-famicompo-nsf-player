@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build requirements:
-#   emsdk / emcc
-#   cmake
-#   git
-#
-# This script intentionally builds libgme from source rather than bundling
-# an unknown third-party binary. The resulting gme.js/gme.wasm are placed
-# in ../wasm/.
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENDOR="$ROOT/vendor/game-music-emu"
 BUILD="$VENDOR/build-emscripten"
@@ -37,6 +28,7 @@ emcmake cmake .. \
 emmake cmake --build . --config Release -j2
 
 LIBGME_A="$(find "$BUILD" -name 'libgme.a' -print -quit)"
+
 if [ -z "$LIBGME_A" ]; then
   echo "ERROR: libgme.a was not produced."
   exit 3
@@ -54,7 +46,7 @@ em++ -O3 \
   -sENVIRONMENT=web \
   -sALLOW_MEMORY_GROWTH=1 \
   -sEXPORTED_FUNCTIONS='["_malloc","_free","_nsf_bridge_open","_nsf_bridge_track_count","_nsf_bridge_start","_nsf_bridge_play","_nsf_bridge_stop","_nsf_bridge_delete","_nsf_bridge_info"]' \
-  -sEXPORTED_RUNTIME_METHODS='["ccall","cwrap"]'
+  -sEXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPU8","HEAP16"]'
 
 echo "Built:"
 ls -lh "$OUT/gme.js" "$OUT/gme.wasm"
