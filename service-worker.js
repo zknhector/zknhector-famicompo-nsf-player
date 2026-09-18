@@ -7,7 +7,7 @@
  * JavaScript files after the audio ABI fix.
  */
 
-const CACHE_NAME = "famicompo-nsf-player-v0.3";
+const CACHE_NAME = "famicompo-nsf-player-v0.4";
 
 const APP_FILES = [
     "./",
