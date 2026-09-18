@@ -1,197 +1,123 @@
-const NSFPlayer = {
+const App = {
+  songs: [],
   currentSong: null,
-  playing: false,
-  volume: 0.8,
-
-  audioContext: null,
-  gainNode: null,
-  workletNode: null,
-
-  pumpToken: 0,
 
   async init() {
-    if (this.audioContext) return;
-
-    this.audioContext = new AudioContext();
-
-    this.gainNode = this.audioContext.createGain();
-    this.gainNode.gain.value = this.volume;
-    this.gainNode.connect(this.audioContext.destination);
-
-    await this.audioContext.audioWorklet.addModule(
-      "js/audio-worker.js"
-    );
+    await NSFPlayer.init();
+    await NSFLibrary.init();
+    this.songs = [...NSFLibrary.songs];
+    this.bindUI();
+    this.render();
   },
 
-  async load(song) {
-    await this.init();
+  bindUI() {
+    const input = document.getElementById("file-input");
 
-    this.stop();
-
-    this.currentSong = song;
-
-    const buffer = await song.file.arrayBuffer();
-
-    await NSFEngine.load(buffer);
-  },
-
-  createAudio() {
-    if (this.workletNode) return;
-
-    this.workletNode = new AudioWorkletNode(
-      this.audioContext,
-      "nsf-audio"
+    input.addEventListener(
+      "change",
+      e => this.loadFiles(e.target.files)
     );
 
-    this.workletNode.connect(this.gainNode);
+    document.getElementById("play").onclick =
+      () => NSFPlayer.play();
+
+    document.getElementById("stop").onclick =
+      () => NSFPlayer.stop();
+
+    document.getElementById("prev").onclick =
+      async () => {
+        if (await NSFPlayer.previousTrack()) {
+          this.updateInfo();
+        }
+      };
+
+    document.getElementById("next").onclick =
+      async () => {
+        if (await NSFPlayer.nextTrack()) {
+          this.updateInfo();
+        }
+      };
+
+    document.getElementById("volume").oninput =
+      e => NSFPlayer.setVolume(e.target.value);
   },
 
-  clearAudioQueue() {
-    if (this.workletNode) {
-      this.workletNode.port.postMessage("clear");
+  async loadFiles(files) {
+    for (const file of files) {
+      if (!/\.(nsf|nsfe)$/i.test(file.name)) continue;
+
+      const song = await NSFLibrary.add({
+        filename: file.name,
+        file
+      });
+
+      this.songs.push(song);
     }
+
+    this.render();
   },
 
-  async play() {
-    if (!this.currentSong) {
-      console.error("No song selected");
-      return false;
-    }
+  render() {
+    const list = document.getElementById("song-list");
 
-    await this.init();
-    await this.audioContext.resume();
+    list.textContent = "";
 
-    this.createAudio();
-    this.clearAudioQueue();
-
-    if (!NSFEngine.start()) {
-      console.error("NSFEngine.start() failed");
-      return false;
-    }
-
-    this.playing = true;
-
-    const token = ++this.pumpToken;
-    this.pump(token);
-
-    return true;
-  },
-
-  pump(token) {
-    if (
-      !this.playing ||
-      !this.workletNode ||
-      token !== this.pumpToken
-    ) {
+    if (!this.songs.length) {
+      const li = document.createElement("li");
+      li.textContent = "まだ曲がありません";
+      list.appendChild(li);
       return;
     }
 
-    try {
-      const pcm = NSFEngine.getFloatPCM(2048);
+    for (const song of this.songs) {
+      const li = document.createElement("li");
 
-      if (pcm.length > 0) {
-        this.workletNode.port.postMessage(
-          pcm,
-          [pcm.buffer]
-        );
-      }
+      li.textContent = song.filename;
 
-      requestAnimationFrame(() => this.pump(token));
+      li.onclick = async () => {
+        this.currentSong = song;
 
-    } catch (error) {
-      console.error(
-        "NSF audio pump failed:",
-        error
-      );
+        try {
+          await NSFPlayer.load(song);
+          this.updateInfo();
+        } catch (e) {
+          console.error(e);
+          alert(
+            "このファイルを読み込めませんでした。WASM版libgmeが必要です。"
+          );
+        }
+      };
 
-      this.playing = false;
-      this.pumpToken++;
+      list.appendChild(li);
     }
   },
 
-  stop() {
-    this.playing = false;
-    this.pumpToken++;
+  updateInfo() {
+    const info = NSFPlayer.getInfo();
 
-    this.clearAudioQueue();
+    document.getElementById("title").textContent =
+      info.title || "-";
 
-    if (typeof NSFEngine !== "undefined") {
-      NSFEngine.stop();
-    }
-  },
+    document.getElementById("composer").textContent =
+      info.artist || "-";
 
-  async setTrack(track) {
-    if (
-      typeof NSFEngine === "undefined" ||
-      !NSFEngine.trackCount
-    ) {
-      return false;
-    }
+    document.getElementById("chip").textContent =
+      info.chip || "-";
 
-    if (
-      track < 0 ||
-      track >= NSFEngine.trackCount
-    ) {
-      return false;
-    }
+    document.getElementById("copyright").textContent =
+      info.copyright || "-";
 
-    const wasPlaying = this.playing;
+    document.getElementById("track").textContent =
+      info.trackCount
+        ? `${NSFEngine.currentTrack + 1} / ${info.trackCount}`
+        : "-";
 
-    this.clearAudioQueue();
-
-    if (!NSFEngine.setTrack(track)) {
-      return false;
-    }
-
-    if (wasPlaying) {
-      this.playing = true;
-      const token = ++this.pumpToken;
-      this.pump(token);
-    }
-
-    return true;
-  },
-
-  async previousTrack() {
-    if (!NSFEngine.trackCount) return false;
-
-    const track =
-      (NSFEngine.currentTrack - 1 + NSFEngine.trackCount) %
-      NSFEngine.trackCount;
-
-    return this.setTrack(track);
-  },
-
-  async nextTrack() {
-    if (!NSFEngine.trackCount) return false;
-
-    const track =
-      (NSFEngine.currentTrack + 1) %
-      NSFEngine.trackCount;
-
-    return this.setTrack(track);
-  },
-
-  setVolume(value) {
-    this.volume = Math.max(
-      0,
-      Math.min(1, Number(value) / 100)
-    );
-
-    if (this.gainNode) {
-      this.gainNode.gain.value = this.volume;
-    }
-  },
-
-  getInfo() {
-    if (
-      typeof NSFEngine === "undefined"
-    ) {
-      return {};
-    }
-
-    return NSFEngine.getInfo() || {};
+    document.getElementById("extension").textContent =
+      info.format || "-";
   }
 };
 
-window.NSFPlayer = NSFPlayer;
+window.addEventListener(
+  "load",
+  () => App.init().catch(console.error)
+);
