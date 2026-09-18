@@ -1,26 +1,49 @@
 class NSFProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
+
     this.queue = [];
     this.block = null;
     this.pos = 0;
-    this.port.onmessage = e => {
-      if (e.data instanceof Float32Array) this.queue.push(e.data);
+
+    this.port.onmessage = (event) => {
+      if (event.data === "clear") {
+        this.queue.length = 0;
+        this.block = null;
+        this.pos = 0;
+        return;
+      }
+
+      if (event.data instanceof Float32Array) {
+        this.queue.push(event.data);
+      }
     };
   }
+
   process(_inputs, outputs) {
-    const out = outputs[0];
-    const left = out[0], right = out[1];
+    const output = outputs[0];
+    const left = output[0];
+    const right = output[1];
+
     for (let i = 0; i < left.length; i++) {
       if (!this.block || this.pos >= this.block.length) {
         this.block = this.queue.shift() || null;
         this.pos = 0;
       }
-      const v = this.block ? this.block[this.pos++] : 0;
-      left[i] = v;
-      if (right) right[i] = v;
+
+      const value = this.block
+        ? this.block[this.pos++]
+        : 0;
+
+      left[i] = value;
+
+      if (right) {
+        right[i] = value;
+      }
     }
+
     return true;
   }
 }
+
 registerProcessor("nsf-audio", NSFProcessor);
