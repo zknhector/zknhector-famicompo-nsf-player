@@ -7,6 +7,8 @@ const NSFPlayer = {
   gainNode: null,
   workletNode: null,
 
+  pumpToken: 0,
+
   async init() {
     if (this.audioContext) return;
 
@@ -44,6 +46,12 @@ const NSFPlayer = {
     this.workletNode.connect(this.gainNode);
   },
 
+  clearAudioQueue() {
+    if (this.workletNode) {
+      this.workletNode.port.postMessage("clear");
+    }
+  },
+
   async play() {
     if (!this.currentSong) {
       console.error("No song selected");
@@ -51,10 +59,10 @@ const NSFPlayer = {
     }
 
     await this.init();
-
     await this.audioContext.resume();
 
     this.createAudio();
+    this.clearAudioQueue();
 
     if (!NSFEngine.start()) {
       console.error("NSFEngine.start() failed");
@@ -63,13 +71,20 @@ const NSFPlayer = {
 
     this.playing = true;
 
-    this.pump();
+    const token = ++this.pumpToken;
+    this.pump(token);
 
     return true;
   },
 
-  pump() {
-    if (!this.playing || !this.workletNode) return;
+  pump(token) {
+    if (
+      !this.playing ||
+      !this.workletNode ||
+      token !== this.pumpToken
+    ) {
+      return;
+    }
 
     try {
       const pcm = NSFEngine.getFloatPCM(2048);
@@ -81,7 +96,7 @@ const NSFPlayer = {
         );
       }
 
-      requestAnimationFrame(() => this.pump());
+      requestAnimationFrame(() => this.pump(token));
 
     } catch (error) {
       console.error(
@@ -90,15 +105,71 @@ const NSFPlayer = {
       );
 
       this.playing = false;
+      this.pumpToken++;
     }
   },
 
   stop() {
     this.playing = false;
+    this.pumpToken++;
+
+    this.clearAudioQueue();
 
     if (typeof NSFEngine !== "undefined") {
       NSFEngine.stop();
     }
+  },
+
+  async setTrack(track) {
+    if (
+      typeof NSFEngine === "undefined" ||
+      !NSFEngine.trackCount
+    ) {
+      return false;
+    }
+
+    if (
+      track < 0 ||
+      track >= NSFEngine.trackCount
+    ) {
+      return false;
+    }
+
+    const wasPlaying = this.playing;
+
+    this.clearAudioQueue();
+
+    if (!NSFEngine.setTrack(track)) {
+      return false;
+    }
+
+    if (wasPlaying) {
+      this.playing = true;
+      const token = ++this.pumpToken;
+      this.pump(token);
+    }
+
+    return true;
+  },
+
+  async previousTrack() {
+    if (!NSFEngine.trackCount) return false;
+
+    const track =
+      (NSFEngine.currentTrack - 1 + NSFEngine.trackCount) %
+      NSFEngine.trackCount;
+
+    return this.setTrack(track);
+  },
+
+  async nextTrack() {
+    if (!NSFEngine.trackCount) return false;
+
+    const track =
+      (NSFEngine.currentTrack + 1) %
+      NSFEngine.trackCount;
+
+    return this.setTrack(track);
   },
 
   setVolume(value) {
