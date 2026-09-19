@@ -6,7 +6,6 @@ async init() {
 this.db = await new Promise((resolve, reject) => {
 const request = indexedDB.open("NSFLibrary", 3);
 
-```
   request.onupgradeneeded = event => {
     const db = event.target.result;
 
@@ -32,14 +31,12 @@ this.songs = await this.getAll();
 await this.cleanupDuplicates();
 
 return this.songs;
-```
 
 },
 
 async getFileHash(file) {
 const buffer = await file.arrayBuffer();
 
-```
 const digest = await crypto.subtle.digest(
   "SHA-256",
   buffer
@@ -52,7 +49,6 @@ return Array.from(bytes)
     byte.toString(16).padStart(2, "0")
   )
   .join("");
-```
 
 },
 
@@ -61,7 +57,6 @@ if (!this.db || !this.songs.length) {
 return;
 }
 
-```
 const seen = new Map();
 const duplicates = [];
 const updates = [];
@@ -118,7 +113,6 @@ this.songs = await this.getAll();
 console.log(
   `Library cleanup: ${duplicates.length} duplicate(s) removed`
 );
-```
 
 },
 
@@ -127,7 +121,6 @@ if (!this.db) {
 await this.init();
 }
 
-```
 const hash = await this.getFileHash(song.file);
 
 const existing = this.songs.find(
@@ -179,7 +172,6 @@ const saved = {
 this.songs.push(saved);
 
 return saved;
-```
 
 },
 
@@ -188,7 +180,6 @@ if (!this.db) {
 return [];
 }
 
-```
 return await new Promise((resolve, reject) => {
   const request = this.db
     .transaction("songs")
@@ -203,7 +194,6 @@ return await new Promise((resolve, reject) => {
     reject(request.error);
   };
 });
-```
 
 },
 
@@ -212,7 +202,6 @@ if (!this.db) {
 return;
 }
 
-```
 await new Promise((resolve, reject) => {
   const tx = this.db.transaction(
     "songs",
@@ -230,7 +219,6 @@ await new Promise((resolve, reject) => {
 this.songs = this.songs.filter(
   song => song.id !== id
 );
-```
 
 }
 };
