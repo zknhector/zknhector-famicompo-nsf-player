@@ -6,12 +6,10 @@ async init() {
 await NSFPlayer.init();
 await NSFLibrary.init();
 
-```
 this.songs = [...NSFLibrary.songs];
 
 this.bindUI();
 this.render();
-```
 
 },
 
@@ -43,7 +41,6 @@ document.getElementById("next").onclick = () => {
 document.getElementById("volume").oninput = e => {
   NSFPlayer.setVolume(e.target.value);
 };
-```
 
 },
 
@@ -53,7 +50,6 @@ console.log("No song selected");
 return;
 }
 
-```
 const count = NSFEngine.trackCount;
 
 if (!count || count <= 1) {
@@ -95,7 +91,6 @@ this.updateInfo();
 if (wasPlaying) {
   await NSFPlayer.play();
 }
-```
 
 },
 
@@ -103,7 +98,6 @@ async loadFiles(files) {
 let added = 0;
 let duplicates = 0;
 
-```
 for (const file of files) {
   if (!/\.(nsf|nsfe)$/i.test(file.name)) {
     continue;
@@ -133,7 +127,6 @@ if (duplicates > 0) {
 console.log(
   `Library: ${added} added, ${duplicates} duplicate(s) skipped`
 );
-```
 
 },
 
@@ -142,7 +135,6 @@ if (!song || !song.id) {
 return;
 }
 
-```
 if (this.currentSong?.id === song.id) {
   NSFPlayer.stop();
   NSFPlayer.currentSong = null;
@@ -154,7 +146,6 @@ await NSFLibrary.remove(song.id);
 this.songs = [...NSFLibrary.songs];
 
 this.render();
-```
 
 },
 
@@ -162,7 +153,6 @@ render() {
 const list =
 document.getElementById("song-list");
 
-```
 list.textContent = "";
 
 if (!this.songs.length) {
@@ -216,14 +206,12 @@ for (const song of this.songs) {
 
   list.appendChild(li);
 }
-```
 
 },
 
 updateInfo() {
 const info = NSFPlayer.getInfo();
 
-```
 document.getElementById("title").textContent =
   info.title || "-";
 
@@ -243,7 +231,6 @@ document.getElementById("track").textContent =
 
 document.getElementById("extension").textContent =
   info.format || "-";
-```
 
 }
 };
