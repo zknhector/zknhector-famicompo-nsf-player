@@ -54,7 +54,6 @@ if (cachedResponse) {
 return cachedResponse;
 }
 
-```
     return fetch(request).then(response => {
       if (!response || response.status !== 200) {
         return response;
@@ -70,7 +69,5 @@ return cachedResponse;
       return response;
     });
   })
-```
-
 );
 });
