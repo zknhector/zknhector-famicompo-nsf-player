@@ -36,7 +36,9 @@ await NSFEngine.load(buffer);
 },
 
 createAudio() {
-if (this.workletNode) return;
+if (this.workletNode) {
+return;
+}
 
 this.workletNode = new AudioWorkletNode(
   this.audioContext,
@@ -44,6 +46,16 @@ this.workletNode = new AudioWorkletNode(
 );
 
 this.workletNode.connect(this.gainNode);
+
+this.workletNode.port.onmessage = event => {
+  if (!event.data) {
+    return;
+  }
+
+  if (event.data.type === "need") {
+    this.feedAudio();
+  }
+};
 
 },
 
@@ -66,34 +78,55 @@ if (!NSFEngine.start()) {
 
 this.playing = true;
 
-this.pump();
+this.workletNode.port.postMessage({
+  type: "start"
+});
+
+/*
+ * 最初に少量だけ先行供給する。
+ *
+ * 2048 frames × 4 = 約170ms
+ * これ以上はWorklet側から要求された時だけ補給する。
+ */
+this.feedAudio();
+this.feedAudio();
+this.feedAudio();
+this.feedAudio();
 
 return true;
 
 },
 
-pump() {
-if (!this.playing || !this.workletNode) return;
+feedAudio() {
+if (!this.playing || !this.workletNode) {
+return;
+}
 
 try {
   const pcm = NSFEngine.getFloatPCM(2048);
 
-  if (pcm.length > 0) {
-    this.workletNode.port.postMessage(
-      pcm,
-      [pcm.buffer]
-    );
+  if (!pcm || pcm.length === 0) {
+    return;
   }
 
-  requestAnimationFrame(() => this.pump());
+  this.workletNode.port.postMessage(
+    pcm,
+    [pcm.buffer]
+  );
 
 } catch (error) {
   console.error(
-    "NSF audio pump failed:",
+    "NSF audio feed failed:",
     error
   );
 
   this.playing = false;
+
+  if (this.workletNode) {
+    this.workletNode.port.postMessage({
+      type: "stop"
+    });
+  }
 }
 
 },
@@ -101,6 +134,11 @@ try {
 stop() {
 this.playing = false;
 
+if (this.workletNode) {
+  this.workletNode.port.postMessage({
+    type: "stop"
+  });
+}
 
 if (typeof NSFEngine !== "undefined") {
   NSFEngine.stop();
@@ -113,7 +151,6 @@ this.volume = Math.max(
 0,
 Math.min(1, Number(value) / 100)
 );
-
 
 if (this.gainNode) {
   this.gainNode.gain.value = this.volume;
