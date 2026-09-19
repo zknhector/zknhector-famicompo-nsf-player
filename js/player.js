@@ -10,7 +10,6 @@ workletNode: null,
 async init() {
 if (this.audioContext) return;
 
-```
 this.audioContext = new AudioContext();
 
 this.gainNode = this.audioContext.createGain();
@@ -20,14 +19,12 @@ this.gainNode.connect(this.audioContext.destination);
 await this.audioContext.audioWorklet.addModule(
   "js/audio-worker.js"
 );
-```
 
 },
 
 async load(song) {
 await this.init();
 
-```
 this.stop();
 
 this.currentSong = song;
@@ -35,21 +32,18 @@ this.currentSong = song;
 const buffer = await song.file.arrayBuffer();
 
 await NSFEngine.load(buffer);
-```
 
 },
 
 createAudio() {
 if (this.workletNode) return;
 
-```
 this.workletNode = new AudioWorkletNode(
   this.audioContext,
   "nsf-audio"
 );
 
 this.workletNode.connect(this.gainNode);
-```
 
 },
 
@@ -59,7 +53,6 @@ console.error("No song selected");
 return false;
 }
 
-```
 await this.init();
 
 await this.audioContext.resume();
@@ -76,14 +69,12 @@ this.playing = true;
 this.pump();
 
 return true;
-```
 
 },
 
 pump() {
 if (!this.playing || !this.workletNode) return;
 
-```
 try {
   const pcm = NSFEngine.getFloatPCM(2048);
 
@@ -104,18 +95,16 @@ try {
 
   this.playing = false;
 }
-```
 
 },
 
 stop() {
 this.playing = false;
 
-```
+
 if (typeof NSFEngine !== "undefined") {
   NSFEngine.stop();
 }
-```
 
 },
 
@@ -125,11 +114,10 @@ this.volume = Math.max(
 Math.min(1, Number(value) / 100)
 );
 
-```
+
 if (this.gainNode) {
   this.gainNode.gain.value = this.volume;
 }
-```
 
 },
 
@@ -140,9 +128,7 @@ typeof NSFEngine === "undefined"
 return {};
 }
 
-```
 return NSFEngine.getInfo() || {};
-```
 
 }
 };
