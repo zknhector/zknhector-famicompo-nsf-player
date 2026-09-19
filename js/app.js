@@ -17,7 +17,6 @@ bindUI() {
 const input =
 document.getElementById("file-input");
 
-```
 input.addEventListener("change", e => {
   this.loadFiles(e.target.files);
 });
