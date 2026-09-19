@@ -10,7 +10,7 @@ this.songs = [...NSFLibrary.songs];
 
 this.bindUI();
 this.render();
-
+  
 },
 
 bindUI() {
