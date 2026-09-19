@@ -126,5 +126,25 @@ Math.min(1, Number(value) / 100)
 );
 
 ```
-if (this.gain
+if (this.gainNode) {
+  this.gainNode.gain.value = this.volume;
+}
 ```
+
+},
+
+getInfo() {
+if (
+typeof NSFEngine === "undefined"
+) {
+return {};
+}
+
+```
+return NSFEngine.getInfo() || {};
+```
+
+}
+};
+
+window.NSFPlayer = NSFPlayer;
