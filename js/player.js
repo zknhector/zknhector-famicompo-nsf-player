@@ -1,123 +1,130 @@
-const App = {
-  songs: [],
-  currentSong: null,
+const NSFPlayer = {
+currentSong: null,
+playing: false,
+volume: 0.8,
 
-  async init() {
-    await NSFPlayer.init();
-    await NSFLibrary.init();
-    this.songs = [...NSFLibrary.songs];
-    this.bindUI();
-    this.render();
-  },
+audioContext: null,
+gainNode: null,
+workletNode: null,
 
-  bindUI() {
-    const input = document.getElementById("file-input");
+async init() {
+if (this.audioContext) return;
 
-    input.addEventListener(
-      "change",
-      e => this.loadFiles(e.target.files)
-    );
+```
+this.audioContext = new AudioContext();
 
-    document.getElementById("play").onclick =
-      () => NSFPlayer.play();
+this.gainNode = this.audioContext.createGain();
+this.gainNode.gain.value = this.volume;
+this.gainNode.connect(this.audioContext.destination);
 
-    document.getElementById("stop").onclick =
-      () => NSFPlayer.stop();
-
-    document.getElementById("prev").onclick =
-      async () => {
-        if (await NSFPlayer.previousTrack()) {
-          this.updateInfo();
-        }
-      };
-
-    document.getElementById("next").onclick =
-      async () => {
-        if (await NSFPlayer.nextTrack()) {
-          this.updateInfo();
-        }
-      };
-
-    document.getElementById("volume").oninput =
-      e => NSFPlayer.setVolume(e.target.value);
-  },
-
-  async loadFiles(files) {
-    for (const file of files) {
-      if (!/\.(nsf|nsfe)$/i.test(file.name)) continue;
-
-      const song = await NSFLibrary.add({
-        filename: file.name,
-        file
-      });
-
-      this.songs.push(song);
-    }
-
-    this.render();
-  },
-
-  render() {
-    const list = document.getElementById("song-list");
-
-    list.textContent = "";
-
-    if (!this.songs.length) {
-      const li = document.createElement("li");
-      li.textContent = "まだ曲がありません";
-      list.appendChild(li);
-      return;
-    }
-
-    for (const song of this.songs) {
-      const li = document.createElement("li");
-
-      li.textContent = song.filename;
-
-      li.onclick = async () => {
-        this.currentSong = song;
-
-        try {
-          await NSFPlayer.load(song);
-          this.updateInfo();
-        } catch (e) {
-          console.error(e);
-          alert(
-            "このファイルを読み込めませんでした。WASM版libgmeが必要です。"
-          );
-        }
-      };
-
-      list.appendChild(li);
-    }
-  },
-
-  updateInfo() {
-    const info = NSFPlayer.getInfo();
-
-    document.getElementById("title").textContent =
-      info.title || "-";
-
-    document.getElementById("composer").textContent =
-      info.artist || "-";
-
-    document.getElementById("chip").textContent =
-      info.chip || "-";
-
-    document.getElementById("copyright").textContent =
-      info.copyright || "-";
-
-    document.getElementById("track").textContent =
-      info.trackCount
-        ? `${NSFEngine.currentTrack + 1} / ${info.trackCount}`
-        : "-";
-
-    document.getElementById("extension").textContent =
-      info.format || "-";
-  }
-};
-
-window.addEventListener(
-  "load",
-  () => App.init().catch(console.error)
+await this.audioContext.audioWorklet.addModule(
+  "js/audio-worker.js"
 );
+```
+
+},
+
+async load(song) {
+await this.init();
+
+```
+this.stop();
+
+this.currentSong = song;
+
+const buffer = await song.file.arrayBuffer();
+
+await NSFEngine.load(buffer);
+```
+
+},
+
+createAudio() {
+if (this.workletNode) return;
+
+```
+this.workletNode = new AudioWorkletNode(
+  this.audioContext,
+  "nsf-audio"
+);
+
+this.workletNode.connect(this.gainNode);
+```
+
+},
+
+async play() {
+if (!this.currentSong) {
+console.error("No song selected");
+return false;
+}
+
+```
+await this.init();
+
+await this.audioContext.resume();
+
+this.createAudio();
+
+if (!NSFEngine.start()) {
+  console.error("NSFEngine.start() failed");
+  return false;
+}
+
+this.playing = true;
+
+this.pump();
+
+return true;
+```
+
+},
+
+pump() {
+if (!this.playing || !this.workletNode) return;
+
+```
+try {
+  const pcm = NSFEngine.getFloatPCM(2048);
+
+  if (pcm.length > 0) {
+    this.workletNode.port.postMessage(
+      pcm,
+      [pcm.buffer]
+    );
+  }
+
+  requestAnimationFrame(() => this.pump());
+
+} catch (error) {
+  console.error(
+    "NSF audio pump failed:",
+    error
+  );
+
+  this.playing = false;
+}
+```
+
+},
+
+stop() {
+this.playing = false;
+
+```
+if (typeof NSFEngine !== "undefined") {
+  NSFEngine.stop();
+}
+```
+
+},
+
+setVolume(value) {
+this.volume = Math.max(
+0,
+Math.min(1, Number(value) / 100)
+);
+
+```
+if (this.gain
+```
