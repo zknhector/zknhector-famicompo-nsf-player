@@ -1,260 +1,574 @@
-/* 
- Chromebook-Famicompo-NSF-Player
- style.css
+/*
+    Chromebook NSF Player
+    Touch UI / 1920x1080 optimized
 */
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
 
 
 body {
-
-    margin:0;
-
-    padding:0;
-
     font-family:
         "Noto Sans JP",
         Arial,
         sans-serif;
 
-    background:#111;
+    background: #111;
+    color: #eee;
 
-    color:#eee;
+    display: flex;
+    flex-direction: column;
 
+    overflow: hidden;
 }
 
 
+/* =========================
+   Header
+   ========================= */
 
 header {
+    flex: 0 0 auto;
 
-    background:#222;
+    background: #222;
 
-    padding:20px;
+    padding:
+        14px
+        20px;
 
-    text-align:center;
+    text-align: center;
 
     border-bottom:
         4px solid #555;
-
 }
 
 
+header h1 {
+    margin: 0;
 
-h1 {
-
-    margin:0;
-
-    font-size:28px;
-
+    font-size: 30px;
+    line-height: 1.3;
 }
 
 
+header p {
+    margin:
+        6px
+        0
+        0;
+
+    font-size: 17px;
+
+    color: #bbb;
+}
+
+
+/* =========================
+   Main
+   ========================= */
 
 main {
+    flex: 1 1 auto;
 
-    max-width:900px;
+    width: 100%;
 
-    margin:auto;
+    padding: 16px 20px;
 
-    padding:20px;
+    display: grid;
 
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
+    grid-template-rows:
+        150px
+        minmax(0, 1fr)
+        145px;
+
+    grid-template-areas:
+
+        "drop info"
+
+        "library engine"
+
+        "player player";
+
+    gap: 14px;
+
+    min-height: 0;
 }
 
 
+/* =========================
+   Common section
+   ========================= */
 
 section {
+    background: #1b1b1b;
 
-    background:#1b1b1b;
+    border-radius: 12px;
 
-    border-radius:12px;
+    padding: 16px;
 
-    padding:20px;
+    margin: 0;
 
-    margin-bottom:20px;
+    border:
+        1px solid #333;
 
     box-shadow:
         0 0 10px #000;
 
+    min-width: 0;
+    min-height: 0;
 }
 
 
+section h2 {
+    margin:
+        0
+        0
+        12px;
 
-/* ドロップエリア */
+    font-size: 21px;
+}
+
+
+/* =========================
+   File input
+   ========================= */
 
 #drop-area {
+    grid-area: drop;
 
-    text-align:center;
+    text-align: center;
 
     border:
-        3px dashed #777;
+        3px dashed #666;
 
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
 }
 
+
+#drop-area h2 {
+    margin-bottom: 6px;
+}
+
+
+#drop-area p {
+    margin:
+        4px
+        0
+        8px;
+
+    color: #bbb;
+}
 
 
 #drop-area.dragover {
+    background: #333;
 
-    background:#333;
-
-    border-color:#fff;
-
+    border-color: #fff;
 }
 
 
+input[type="file"] {
+    max-width: 100%;
 
-input[type=file] {
+    font-size: 17px;
 
-    margin-top:15px;
-
-    font-size:18px;
-
+    color: #eee;
 }
 
 
+/* =========================
+   Library
+   ========================= */
 
-/* ライブラリ */
+#library {
+    grid-area: library;
+
+    display: flex;
+
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
 
 #song-list {
+    list-style: none;
 
-    list-style:none;
+    padding: 0;
+    margin: 0;
 
-    padding:0;
+    overflow-y: auto;
 
-    margin:0;
+    flex: 1 1 auto;
 
+    min-height: 0;
+
+    scrollbar-width: auto;
 }
 
 
+/*
+    Touch-friendly song rows
+*/
 
 #song-list li {
+    min-height: 54px;
 
-    padding:15px;
+    padding:
+        12px
+        14px;
 
-    margin-bottom:8px;
+    margin-bottom: 7px;
 
-    background:#292929;
+    background: #292929;
 
-    border-radius:8px;
+    border-radius: 9px;
 
-    cursor:pointer;
+    cursor: pointer;
 
-    font-size:18px;
+    font-size: 18px;
 
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    user-select: none;
+
+    -webkit-user-select: none;
+
+    touch-action: manipulation;
 }
-
 
 
 #song-list li:hover {
-
-    background:#444;
-
+    background: #3a3a3a;
 }
 
 
+#song-list li:active {
+    background: #505050;
 
-/* 情報表示 */
+    transform: scale(0.995);
+}
+
+
+/*
+    Delete button inside library
+*/
+
+#song-list li button {
+    flex:
+        0 0 auto;
+
+    width: 52px;
+    height: 44px;
+
+    margin: 0;
+
+    font-size: 20px;
+
+    border-radius: 9px;
+}
+
+
+/* =========================
+   Information
+   ========================= */
+
+#info {
+    grid-area: info;
+
+    overflow: hidden;
+}
+
+
+#info p {
+    margin:
+        8px
+        0;
+
+    font-size: 17px;
+
+    line-height: 1.45;
+}
+
 
 #info span {
+    color: #7ee7ff;
 
-    color:#7ee7ff;
-
+    word-break: break-word;
 }
 
 
+/* =========================
+   Engine information
+   ========================= */
 
-/* プレイヤー */
+#engine-info {
+    grid-area: engine;
+
+    overflow: hidden;
+}
+
+
+#engine-info p {
+    margin:
+        8px
+        0;
+
+    font-size: 17px;
+}
+
+
+#engine-info span {
+    color: #7ee7ff;
+}
+
+
+/* =========================
+   Player
+   ========================= */
 
 #player {
+    grid-area: player;
 
-    text-align:center;
+    text-align: center;
 
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    padding:
+        10px
+        20px;
 }
 
 
-
-button {
-
-    width:70px;
-
-    height:55px;
-
-    margin:5px;
-
-    font-size:22px;
-
-    border-radius:10px;
-
-    border:none;
-
-    background:#333;
-
-    color:white;
-
+#player h2 {
+    margin:
+        0
+        5px
+        8px;
 }
 
 
+/*
+    Main playback buttons
+*/
 
-button:hover {
+#player button {
+    width: 115px;
+    height: 78px;
 
-    background:#555;
+    margin:
+        0
+        8px;
 
+    font-size: 30px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid #555;
+
+    background: #333;
+
+    color: white;
+
+    cursor: pointer;
+
+    touch-action: manipulation;
+
+    user-select: none;
+
+    -webkit-user-select: none;
+
+    transition:
+        background 0.08s,
+        transform 0.08s;
 }
 
 
-
-button:active {
-
-    transform:scale(0.95);
-
+#player button:hover {
+    background: #4a4a4a;
 }
 
 
+#player button:active {
+    background: #666;
 
-input[type=range] {
-
-    width:70%;
-
+    transform: scale(0.94);
 }
 
 
-
-/* フッター */
+/* =========================
+   Footer
+   ========================= */
 
 footer {
+    flex: 0 0 auto;
 
-    text-align:center;
+    text-align: center;
 
-    padding:20px;
+    padding:
+        8px
+        20px;
 
-    color:#999;
+    color: #999;
 
+    background: #181818;
+
+    border-top:
+        2px solid #333;
+
+    font-size: 14px;
 }
 
 
+/* =========================
+   Touch / Chromebook
+   ========================= */
 
-/* Chromebook縦画面対応 */
+button {
+    touch-action: manipulation;
+}
 
-@media(max-width:600px){
 
+/* =========================
+   Smaller horizontal screens
+   ========================= */
 
-    h1 {
+@media (max-width: 1100px) {
 
-        font-size:22px;
-
+    header h1 {
+        font-size: 25px;
     }
 
-
-    button {
-
-        width:60px;
-
-        height:50px;
-
+    header p {
+        font-size: 15px;
     }
 
+    main {
+        padding:
+            12px;
+
+        gap: 10px;
+
+        grid-template-rows:
+            135px
+            minmax(0, 1fr)
+            130px;
+    }
+
+    #player button {
+        width: 100px;
+        height: 70px;
+
+        margin:
+            0
+            5px;
+    }
+}
+
+
+/* =========================
+   Portrait / narrow screens
+   ========================= */
+
+@media (max-width: 700px) {
+
+    body {
+        overflow-y: auto;
+    }
+
+    header {
+        padding: 12px;
+    }
+
+    header h1 {
+        font-size: 22px;
+    }
+
+    header p {
+        font-size: 14px;
+    }
+
+    main {
+        display: flex;
+
+        flex-direction: column;
+
+        padding: 10px;
+
+        gap: 10px;
+
+        min-height: auto;
+    }
 
     section {
-
-        padding:15px;
-
+        flex: 0 0 auto;
     }
 
+    #drop-area {
+        min-height: 145px;
+    }
+
+    #library {
+        height: 300px;
+    }
+
+    #info {
+        min-height: 240px;
+    }
+
+    #engine-info {
+        min-height: 130px;
+    }
+
+    #player {
+        min-height: 150px;
+    }
+
+    #player button {
+        width: 70px;
+        height: 60px;
+
+        font-size: 24px;
+
+        margin:
+            0
+            3px;
+    }
+
+    footer {
+        font-size: 12px;
+    }
 }
