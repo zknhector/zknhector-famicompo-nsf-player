@@ -37,9 +37,7 @@ document.getElementById("next").onclick = () => {
   this.changeTrack(1);
 };
 
-document.getElementById("volume").oninput = e => {
-  NSFPlayer.setVolume(e.target.value);
-};
+
 
 },
 
