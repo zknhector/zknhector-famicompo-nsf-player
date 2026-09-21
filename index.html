@@ -2,41 +2,35 @@
 
 <html lang="ja">
 
-
 <head>
 
+    <meta charset="UTF-8">
 
-<meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
+    <title>
+        Chromebook用 ファミコン NSF / NSFe プレイヤー
+    </title>
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
 
+    <link
+        rel="manifest"
+        href="manifest.json"
+    >
 
-
-<title>
-Chromebook用 ファミコン NSF / NSFe プレイヤー
-</title>
-
-
-
-<link rel="stylesheet"
-href="css/style.css">
-
-
-
-<link rel="manifest"
-href="manifest.json">
-
-
-
-<meta name="theme-color"
-content="#222222">
-
+    <meta
+        name="theme-color"
+        content="#222222"
+    >
 
 </head>
-
-
 
 
 <body>
@@ -44,369 +38,269 @@ content="#222222">
 
 <header>
 
+    <h1>
+        🎮 ファミコン NSF Player　🎮
+    </h1>
 
-<h1>
-🎮 ファミコン NSF Player　🎮
-</h1>
-
-
-<p>
-Chromebook用  ファミコン NSF / NSFe プレイヤー
-</p>
-
+    <p>
+        Chromebook用 ファミコン NSF / NSFe プレイヤー
+    </p>
 
 </header>
-
-
-
-
 
 
 <main>
 
 
+    <!-- =========================================
+         LEFT SIDE
+         ファイル追加 + 曲ライブラリ
+         ========================================= -->
 
+    <div id="left-panel">
 
 
-<section id="drop-area">
+        <section id="drop-area">
 
+            <h2>
+                NSF / NSFe ファイル追加
+            </h2>
 
-<h2>
-NSF / NSFe ファイル追加
-</h2>
+            <p>
+                ファイルを選択してください
+            </p>
 
+            <input
+                type="file"
+                id="file-input"
+                accept=".nsf,.nsfe"
+                multiple
+            >
 
+        </section>
 
-<p>
-ファイルを選択してください
-</p>
 
+        <section id="library">
 
+            <h2>
+                曲ライブラリ
+            </h2>
 
-<input
-type="file"
-id="file-input"
-accept=".nsf,.nsfe"
-multiple>
+            <ul id="song-list">
 
+                <li>
+                    まだ曲がありません
+                </li>
 
+            </ul>
 
-</section>
+        </section>
 
 
+    </div>
 
 
+    <!-- =========================================
+         RIGHT SIDE
+         曲情報 + Engine Status + Player
+         ========================================= -->
 
+    <div id="right-panel">
 
 
+        <section id="info">
 
-<section id="library">
+            <h2>
+                曲情報
+            </h2>
 
+            <p>
+                Title :
+                <span id="title">
+                    -
+                </span>
+            </p>
 
-<h2>
-曲ライブラリ
-</h2>
+            <p>
+                Composer :
+                <span id="composer">
+                    -
+                </span>
+            </p>
 
+            <p>
+                Copyright :
+                <span id="copyright">
+                    -
+                </span>
+            </p>
 
+            <p>
+                Sound Chip :
+                <span id="chip">
+                    -
+                </span>
+            </p>
 
-<ul id="song-list">
+            <p>
+                Track :
+                <span id="track">
+                    -
+                </span>
+            </p>
 
+        </section>
 
-<li>
-まだ曲がありません
-</li>
 
+        <section id="engine-info">
 
-</ul>
+            <h2>
+                Engine Status
+            </h2>
 
+            <p>
+                Engine :
+                <span id="engine">
+                    libgme
+                </span>
+            </p>
 
-</section>
+            <p>
+                Extension :
+                <span id="extension">
+                    -
+                </span>
+            </p>
 
+        </section>
 
 
+        <section id="player">
 
+            <h2>
+                Player
+            </h2>
 
+            <div id="player-buttons">
 
+                <button id="prev">
+                    ◀◀
+                </button>
 
+                <button id="play">
+                    ▶
+                </button>
 
-<section id="info">
+                <button id="stop">
+                    ■
+                </button>
 
+                <button id="next">
+                    ▶▶
+                </button>
 
-<h2>
-曲情報
-</h2>
+            </div>
 
+        </section>
 
 
-<p>
-Title :
-<span id="title">
--
-</span>
-</p>
-
-
-
-<p>
-Composer :
-<span id="composer">
--
-</span>
-</p>
-
-
-
-<p>
-Copyright :
-<span id="copyright">
--
-</span>
-</p>
-
-
-
-<p>
-Sound Chip :
-<span id="chip">
--
-</span>
-</p>
-
-
-
-<p>
-Track :
-<span id="track">
--
-</span>
-</p>
-
-
-
-</section>
-
-
-
-
-
-
-
-
-
-<section id="player">
-
-
-<h2>
-Player
-</h2>
-
-
-
-
-<button id="prev">
-◀◀
-</button>
-
-
-
-<button id="play">
-▶
-</button>
-
-
-
-<button id="stop">
-■
-</button>
-
-
-
-<button id="next">
-▶▶
-</button>
-
-
-
-
-
-
-
-</section>
-
-
-
-
-
-
-
-<section id="engine-info">
-
-
-<h2>
-Engine Status
-</h2>
-
-
-
-<p>
-Engine :
-<span id="engine">
-libgme
-</span>
-</p>
-
-
-
-<p>
-Extension :
-<span id="extension">
--
-</span>
-</p>
-
-
-
-</section>
-
-
-
+    </div>
 
 
 </main>
 
 
-
-
-
-
-
-
-
 <footer>
 
-
-<p>
-Chromebook用  ファミコン NSF / NSFe プレイヤー
-</p>
-
-
+    <p>
+        Chromebook用 ファミコン NSF / NSFe プレイヤー
+    </p>
 
 </footer>
 
 
-
-
-
-
-
-
-
 <!--
+    JavaScript load order
 
-JavaScript load order
-
-
-wasm/gme.js
-    ↓
-libgme-bridge
-    ↓
-gme-loader
-    ↓
-gme-core
-    ↓
-nsf-parser
-    ↓
-nsf-engine
-    ↓
-library
-    ↓
-player
-    ↓
-app
-
-
+    wasm/gme.js
+         ↓
+    libgme-bridge
+         ↓
+    gme-loader
+         ↓
+    gme-core
+         ↓
+    nsf-parser
+         ↓
+    nsf-engine
+         ↓
+    library
+         ↓
+    player
+         ↓
+    app
 -->
 
 
-
-
-
 <script src="wasm/gme.js"></script>
-<script src="js/libgme-bridge.js"></script>
-<script src="js/gme-loader.js"></script>
-<script src="js/gme-core.js"></script>
 
+<script src="js/libgme-bridge.js"></script>
+
+<script src="js/gme-loader.js"></script>
+
+<script src="js/gme-core.js"></script>
 
 <script src="js/nsf-parser.js"></script>
 
-
 <script src="js/nsf-engine.js"></script>
-
 
 <script src="js/library.js"></script>
 
-
 <script src="js/player.js"></script>
-
 
 <script src="js/app.js"></script>
 
 
-
-
-
-
-
-
-
-
 <script>
 
-
-if(
+if (
     "serviceWorker" in navigator
-){
-
+) {
 
     window.addEventListener(
         "load",
-        ()=>{
-
+        () => {
 
             navigator.serviceWorker.register(
                 "service-worker.js"
             )
             .then(
-                ()=>{
+                () => {
+
                     console.log(
                         "Service Worker ready"
                     );
+
                 }
             )
             .catch(
-                error=>{
+                error => {
+
                     console.error(
                         error
                     );
+
                 }
             );
-
 
         }
     );
 
-
 }
-
-
 
 </script>
 
 
-
-
-
 </body>
-
 
 </html>
