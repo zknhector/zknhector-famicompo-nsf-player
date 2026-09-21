@@ -3,6 +3,7 @@
     Touch UI / 1920x1080 optimized
 */
 
+
 * {
     box-sizing: border-box;
 }
@@ -12,6 +13,7 @@ html,
 body {
     margin: 0;
     padding: 0;
+
     width: 100%;
     height: 100%;
 }
@@ -33,9 +35,9 @@ body {
 }
 
 
-/* =========================
-   Header
-   ========================= */
+/* ==================================================
+   HEADER
+   ================================================== */
 
 header {
     flex: 0 0 auto;
@@ -43,7 +45,7 @@ header {
     background: #222;
 
     padding:
-        14px
+        12px
         20px;
 
     text-align: center;
@@ -63,97 +65,114 @@ header h1 {
 
 header p {
     margin:
-        6px
+        5px
         0
         0;
 
-    font-size: 17px;
+    font-size: 16px;
 
     color: #bbb;
 }
 
 
-/* =========================
-   Main
-   ========================= */
+/* ==================================================
+   MAIN
+   ================================================== */
 
 main {
     flex: 1 1 auto;
 
     width: 100%;
 
-    padding: 16px 20px;
+    padding:
+        16px
+        20px;
 
     display: grid;
+
+    /*
+        左半分  = ファイル追加 + ライブラリ
+
+        右半分  = 曲情報 + Engine Status + Player
+    */
 
     grid-template-columns:
         minmax(0, 1fr)
         minmax(0, 1fr);
 
     grid-template-rows:
-        150px
-        minmax(0, 1fr)
-        145px;
+        minmax(0, 1fr);
 
     grid-template-areas:
+        "left right";
 
-        "drop info"
-
-        "library engine"
-
-        "player player";
-
-    gap: 14px;
+    gap: 16px;
 
     min-height: 0;
 }
 
 
-/* =========================
-   Common section
-   ========================= */
+/* ==================================================
+   LEFT SIDE
+   ================================================== */
 
-section {
+#drop-area {
+    grid-area: left;
+
+    /*
+        左側の中をさらに
+        ファイル追加
+        ↓
+        ライブラリ
+        に分ける
+    */
+
+    display: grid;
+
+    grid-template-rows:
+        155px
+        minmax(0, 1fr);
+
+    gap: 14px;
+
+    background: transparent;
+
+    border: none;
+
+    border-radius: 0;
+
+    padding: 0;
+
+    box-shadow: none;
+
+    min-width: 0;
+    min-height: 0;
+
+    /*
+        子要素を左右ではなく、
+        drop-areaとlibraryとして
+        実際にはCSS Gridで扱うため、
+        以下は後述の構造変更に対応
+    */
+}
+
+
+/*
+    drop-area 自体を
+    ファイル追加パネルとして使用
+*/
+
+#drop-area {
     background: #1b1b1b;
+
+    border:
+        3px dashed #666;
 
     border-radius: 12px;
 
     padding: 16px;
 
-    margin: 0;
-
-    border:
-        1px solid #333;
-
-    box-shadow:
-        0 0 10px #000;
-
-    min-width: 0;
-    min-height: 0;
-}
-
-
-section h2 {
-    margin:
-        0
-        0
-        12px;
-
-    font-size: 21px;
-}
-
-
-/* =========================
-   File input
-   ========================= */
-
-#drop-area {
-    grid-area: drop;
-
     text-align: center;
-
-    border:
-        3px dashed #666;
 
     display: flex;
 
@@ -162,11 +181,19 @@ section h2 {
     justify-content: center;
 
     align-items: center;
+
+    box-shadow:
+        0 0 10px #000;
 }
 
 
 #drop-area h2 {
-    margin-bottom: 6px;
+    margin:
+        0
+        0
+        8px;
+
+    font-size: 21px;
 }
 
 
@@ -174,7 +201,7 @@ section h2 {
     margin:
         4px
         0
-        8px;
+        10px;
 
     color: #bbb;
 }
@@ -196,18 +223,48 @@ input[type="file"] {
 }
 
 
-/* =========================
-   Library
-   ========================= */
+/* ==================================================
+   LIBRARY
+   ================================================== */
 
 #library {
-    grid-area: library;
+    grid-area: left;
 
-    display: flex;
+    /*
+        現在のHTMLでは
+        #drop-area と #library が
+        main直下にあるため、
+        libraryは左側下段に配置
+    */
 
-    flex-direction: column;
+    background: #1b1b1b;
+
+    border-radius: 12px;
+
+    padding: 16px;
+
+    margin: 0;
+
+    border:
+        1px solid #333;
+
+    box-shadow:
+        0 0 10px #000;
+
+    min-width: 0;
+    min-height: 0;
 
     overflow: hidden;
+}
+
+
+#library h2 {
+    margin:
+        0
+        0
+        12px;
+
+    font-size: 21px;
 }
 
 
@@ -217,25 +274,211 @@ input[type="file"] {
     padding: 0;
     margin: 0;
 
+    height: calc(100% - 38px);
+
     overflow-y: auto;
 
-    flex: 1 1 auto;
-
     min-height: 0;
+}
 
-    scrollbar-width: auto;
+
+/* ==================================================
+   RIGHT SIDE
+   ================================================== */
+
+#info {
+    grid-area: right;
+
+    background: #1b1b1b;
+
+    border-radius: 12px;
+
+    padding: 16px;
+
+    border:
+        1px solid #333;
+
+    box-shadow:
+        0 0 10px #000;
+
+    min-width: 0;
+}
+
+
+/* ==================================================
+   INFO
+   ================================================== */
+
+#info h2 {
+    margin:
+        0
+        0
+        12px;
+
+    font-size: 21px;
+}
+
+
+#info p {
+    margin:
+        8px
+        0;
+
+    font-size: 17px;
+
+    line-height: 1.45;
+}
+
+
+#info span {
+    color: #7ee7ff;
+
+    word-break: break-word;
+}
+
+
+/* ==================================================
+   ENGINE
+   ================================================== */
+
+#engine-info {
+    grid-area: right;
+
+    background: #1b1b1b;
+
+    border-radius: 12px;
+
+    padding: 16px;
+
+    border:
+        1px solid #333;
+
+    box-shadow:
+        0 0 10px #000;
+
+    min-width: 0;
+}
+
+
+#engine-info h2 {
+    margin:
+        0
+        0
+        12px;
+
+    font-size: 21px;
+}
+
+
+#engine-info p {
+    margin:
+        8px
+        0;
+
+    font-size: 17px;
+}
+
+
+#engine-info span {
+    color: #7ee7ff;
+}
+
+
+/* ==================================================
+   PLAYER
+   ================================================== */
+
+#player {
+    grid-area: right;
+
+    background: #1b1b1b;
+
+    border-radius: 12px;
+
+    padding:
+        14px
+        16px;
+
+    border:
+        1px solid #333;
+
+    box-shadow:
+        0 0 10px #000;
+
+    min-width: 0;
+
+    text-align: center;
+}
+
+
+#player h2 {
+    margin:
+        0
+        0
+        10px;
+
+    font-size: 21px;
 }
 
 
 /*
-    Touch-friendly song rows
+    ★ 4つのボタンを横一列 ★
 */
+
+#player button {
+    width: 115px;
+    height: 78px;
+
+    margin:
+        0
+        7px;
+
+    font-size: 30px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid #555;
+
+    background: #333;
+
+    color: white;
+
+    cursor: pointer;
+
+    touch-action: manipulation;
+
+    user-select: none;
+
+    -webkit-user-select: none;
+
+    transition:
+        background 0.08s,
+        transform 0.08s;
+}
+
+
+#player button:hover {
+    background: #4a4a4a;
+}
+
+
+#player button:active {
+    background: #666;
+
+    transform: scale(0.94);
+}
+
+
+/* ==================================================
+   SONG LIST
+   ================================================== */
 
 #song-list li {
     min-height: 54px;
 
     padding:
-        12px
+        10px
         14px;
 
     margin-bottom: 7px;
@@ -277,7 +520,7 @@ input[type="file"] {
 
 
 /*
-    Delete button inside library
+    Delete button
 */
 
 #song-list li button {
@@ -295,143 +538,9 @@ input[type="file"] {
 }
 
 
-/* =========================
-   Information
-   ========================= */
-
-#info {
-    grid-area: info;
-
-    overflow: hidden;
-}
-
-
-#info p {
-    margin:
-        8px
-        0;
-
-    font-size: 17px;
-
-    line-height: 1.45;
-}
-
-
-#info span {
-    color: #7ee7ff;
-
-    word-break: break-word;
-}
-
-
-/* =========================
-   Engine information
-   ========================= */
-
-#engine-info {
-    grid-area: engine;
-
-    overflow: hidden;
-}
-
-
-#engine-info p {
-    margin:
-        8px
-        0;
-
-    font-size: 17px;
-}
-
-
-#engine-info span {
-    color: #7ee7ff;
-}
-
-
-/* =========================
-   Player
-   ========================= */
-
-#player {
-    grid-area: player;
-
-    text-align: center;
-
-    display: flex;
-
-    flex-direction: column;
-
-    justify-content: center;
-
-    align-items: center;
-
-    padding:
-        10px
-        20px;
-}
-
-
-#player h2 {
-    margin:
-        0
-        5px
-        8px;
-}
-
-
-/*
-    Main playback buttons
-*/
-
-#player button {
-    width: 115px;
-    height: 78px;
-
-    margin:
-        0
-        8px;
-
-    font-size: 30px;
-
-    border-radius: 12px;
-
-    border:
-        1px solid #555;
-
-    background: #333;
-
-    color: white;
-
-    cursor: pointer;
-
-    touch-action: manipulation;
-
-    user-select: none;
-
-    -webkit-user-select: none;
-
-    transition:
-        background 0.08s,
-        transform 0.08s;
-}
-
-
-#player button:hover {
-    background: #4a4a4a;
-}
-
-
-#player button:active {
-    background: #666;
-
-    transform: scale(0.94);
-}
-
-
-/* =========================
-   Footer
-   ========================= */
+/* ==================================================
+   FOOTER
+   ================================================== */
 
 footer {
     flex: 0 0 auto;
@@ -453,18 +562,31 @@ footer {
 }
 
 
-/* =========================
-   Touch / Chromebook
-   ========================= */
+/* ==================================================
+   NOTE
+   ==================================================
 
-button {
-    touch-action: manipulation;
-}
+   現在のHTMLは
+   #drop-area
+   #library
+   #info
+   #player
+   #engine-info
+
+   がすべてmain直下なので、
+   1920x1080で完全な
+   「左半分 / 右半分」
+   レイアウトにするには、
+   CSS GridだけでなくHTML側に
+   左右コンテナを追加するのが
+   最も安定します。
+
+*/
 
 
-/* =========================
-   Smaller horizontal screens
-   ========================= */
+/* ==================================================
+   SMALLER SCREEN
+   ================================================== */
 
 @media (max-width: 1100px) {
 
@@ -476,32 +598,20 @@ button {
         font-size: 15px;
     }
 
-    main {
-        padding:
-            12px;
-
-        gap: 10px;
-
-        grid-template-rows:
-            135px
-            minmax(0, 1fr)
-            130px;
-    }
-
     #player button {
-        width: 100px;
-        height: 70px;
+        width: 95px;
+        height: 68px;
 
         margin:
             0
-            5px;
+            4px;
     }
 }
 
 
-/* =========================
-   Portrait / narrow screens
-   ========================= */
+/* ==================================================
+   PORTRAIT / MOBILE
+   ================================================== */
 
 @media (max-width: 700px) {
 
