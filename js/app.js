@@ -209,11 +209,23 @@ for (const song of this.songs) {
 updateInfo() {
 const info = NSFPlayer.getInfo();
 
+const trackIndex = NSFEngine.currentTrack || 0;
+
+const trackTitle =
+  Array.isArray(info.trackTitles)
+    ? info.trackTitles[trackIndex]
+    : "";
+
+const trackArtist =
+  Array.isArray(info.trackArtists)
+    ? info.trackArtists[trackIndex]
+    : "";
+
 document.getElementById("title").textContent =
-  info.title || "-";
+  trackTitle || info.title || "-";
 
 document.getElementById("composer").textContent =
-  info.artist || "-";
+  trackArtist || info.artist || "-";
 
 document.getElementById("chip").textContent =
   info.chip || "-";
