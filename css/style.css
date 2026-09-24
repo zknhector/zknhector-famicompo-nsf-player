@@ -451,13 +451,6 @@ input[type="file"] {
 }
 
 
-#player h2 {
-    margin:
-        0
-        8px;
-}
-
-
 /* =========================================
    PLAYER BUTTON AREA
 
@@ -485,11 +478,21 @@ input[type="file"] {
 
     width: 110px;
 
-    height: 72px;
+    height: 82px;
 
     margin: 0;
 
-    padding: 0;
+    padding: 7px 4px 6px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    gap: 3px;
 
     font-size: 29px;
 
@@ -513,6 +516,28 @@ input[type="file"] {
     transition:
         background 0.08s,
         transform 0.08s;
+}
+
+
+#player-buttons .button-icon {
+    display: block;
+
+    line-height: 1;
+
+    font-size: 29px;
+}
+
+
+#player-buttons .button-label {
+    display: block;
+
+    line-height: 1;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    letter-spacing: 1px;
 }
 
 
@@ -630,7 +655,7 @@ button {
 
         width: 90px;
 
-        height: 65px;
+        height: 76px;
     }
 }
 
@@ -742,9 +767,21 @@ button {
 
         max-width: 90px;
 
-        height: 60px;
+        height: 70px;
 
         font-size: 24px;
+    }
+
+
+    #player-buttons .button-icon {
+        font-size: 24px;
+    }
+
+
+    #player-buttons .button-label {
+        font-size: 10px;
+
+        letter-spacing: 0.8px;
     }
 
 
