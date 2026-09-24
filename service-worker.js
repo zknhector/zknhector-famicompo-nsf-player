@@ -1,4 +1,4 @@
-const CACHE_NAME = "famicompo-nsf-player-v0.5";
+const CACHE_NAME = "famicompo-nsf-player-v0.6";
 
 const ASSETS = [
 "./",
