@@ -101,6 +101,34 @@
 
 
     <!-- =========================================
+         CENTER
+         レトロ・ビジュアライザ
+         ========================================= -->
+
+    <div id="visualizer-panel">
+
+        <section id="spectrum-section">
+            <div class="visualizer-title">
+                <span>VISUALIZER</span>
+                <span id="visualizer-status">READY</span>
+            </div>
+            <canvas id="spectrum-canvas"></canvas>
+        </section>
+
+        <section id="voice-section">
+            <div class="visualizer-title">
+                <span>VOICE LEVEL</span>
+                <span id="voice-count">0 CH</span>
+            </div>
+            <div id="voice-meter-list">
+                <p class="voice-empty">曲を読み込むと音源CHを表示します</p>
+            </div>
+        </section>
+
+    </div>
+
+
+    <!-- =========================================
          RIGHT SIDE
          曲情報 + Engine Status + Player
          ========================================= -->
