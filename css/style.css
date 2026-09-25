@@ -110,6 +110,7 @@ main {
 
     grid-template-columns:
         minmax(0, 1fr)
+        minmax(0, 1.45fr)
         minmax(0, 1fr);
 
     gap: 16px;
@@ -133,6 +134,122 @@ main {
     gap: 14px;
 }
 
+
+
+/* =========================================
+   VISUALIZER PANEL
+   ========================================= */
+
+#visualizer-panel {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 14px;
+}
+
+#spectrum-section,
+#voice-section {
+    overflow: hidden;
+    padding: 12px;
+    background: #101010;
+    border-color: #3d3d3d;
+}
+
+.visualizer-title {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: #f2f2f2;
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+#visualizer-status,
+#voice-count {
+    color: #777;
+    font-size: 11px;
+}
+
+#spectrum-canvas {
+    display: block;
+    width: 100%;
+    height: calc(100% - 28px);
+    image-rendering: pixelated;
+    background:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
+        #070707;
+    background-size: 12px 12px;
+    border: 1px solid #2b2b2b;
+    box-shadow: inset 0 0 24px #000;
+}
+
+#voice-meter-list {
+    height: calc(100% - 28px);
+    overflow-y: auto;
+    padding-right: 4px;
+    font-family: "Courier New", monospace;
+}
+
+.voice-empty {
+    margin: 20px 8px;
+    color: #777;
+    text-align: center;
+    font-size: 13px;
+}
+
+.voice-row {
+    display: grid;
+    grid-template-columns: minmax(95px, 0.9fr) minmax(0, 2.4fr) 48px;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    padding: 3px 0;
+}
+
+.voice-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.voice-bar {
+    height: 13px;
+    padding: 2px;
+    background: #090909;
+    border: 1px solid #303030;
+    box-shadow: inset 0 0 5px #000;
+}
+
+.voice-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #4bff88 0%, #dfff52 72%, #ff4d4d 100%);
+    transition: width 45ms linear;
+}
+
+.voice-db {
+    color: #777;
+    font-size: 10px;
+    text-align: right;
+}
+
+@media (max-width: 1200px) {
+    main {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+    }
+
+    #visualizer-panel {
+        gap: 10px;
+    }
+}
 
 /* =========================================
    RIGHT PANEL
@@ -625,6 +742,7 @@ button {
 
 
     #left-panel,
+    #visualizer-panel,
     #right-panel {
         gap: 10px;
     }
@@ -716,6 +834,7 @@ button {
 
 
     #left-panel,
+    #visualizer-panel,
     #right-panel {
         display: flex;
 
@@ -738,6 +857,18 @@ button {
         min-height: 320px;
     }
 
+
+    #visualizer-panel {
+        min-height: 520px;
+    }
+
+    #spectrum-section {
+        min-height: 250px;
+    }
+
+    #voice-section {
+        min-height: 250px;
+    }
 
     #info {
         min-height: 240px;
