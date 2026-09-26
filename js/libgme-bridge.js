@@ -115,6 +115,11 @@ const LibGME = {
     return this.module._nsf_bridge_voice_count(this.handle);
   },
 
+  isMultiChannel() {
+    if (!this.handle || !this.module || !this.module._nsf_bridge_multi_channel) return false;
+    return this.module._nsf_bridge_multi_channel(this.handle) === 1;
+  },
+
   getVoiceNames() {
     const count = this.getVoiceCount();
     const names = [];
