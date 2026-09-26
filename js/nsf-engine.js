@@ -13,63 +13,139 @@ const NSFEngine = {
   },
 
   async load(buffer) {
-    if (!await this.init()) throw new Error("libgme WASM unavailable");
+    if (!await this.init()) {
+      throw new Error("libgme WASM unavailable");
+    }
+
     const parsed = NSFParser.parse(buffer);
-    if (!parsed) throw new Error("NSF/NSFe format could not be identified");
+
+    if (!parsed) {
+      throw new Error("NSF/NSFe format could not be identified");
+    }
 
     await GMECore.open(buffer);
+
     this.trackCount = GMECore.getTrackCount();
+
     this.currentTrack = Math.min(
       parsed.startTrackIndex || 0,
       Math.max(0, this.trackCount - 1)
     );
+
     this.info = parsed;
+
     this.voiceNames = GMECore.getVoiceNames();
-    this.voiceLevels = new Array(this.voiceNames.length).fill(0);
+
+    this.voiceLevels = new Array(
+      this.voiceNames.length
+    ).fill(0);
+
     return true;
   },
 
   start() {
-    if (!GMECore.startTrack(this.currentTrack)) return false;
+    if (!GMECore.startTrack(this.currentTrack)) {
+      return false;
+    }
+
     this.playing = true;
+
     return true;
   },
 
   stop() {
     this.playing = false;
+
     GMECore.stop();
   },
 
   setTrack(track) {
-    if (track < 0 || track >= this.trackCount) return false;
-    this.currentTrack = track;
-    return !this.playing || GMECore.startTrack(track);
-  },
-
-getFloatPCM(frames) {
-    const pcm = GMECore.getSamples(frames * 2);
-    const levels = GMECore.getVoiceLevels(frames);
-
-    console.log("[NSF JS] voice levels =", levels);
-
-    if (levels.length) {
-        this.voiceLevels = Array.from(levels);
+    if (
+      track < 0 ||
+      track >= this.trackCount
+    ) {
+      return false;
     }
 
-    console.log("[NSF JS] stored voiceLevels =", this.voiceLevels);
+    this.currentTrack = track;
 
-    const out = new Float32Array(pcm.length);
+    return (
+      !this.playing ||
+      GMECore.startTrack(track)
+    );
+  },
 
-    for (let i = 0; i < pcm.length; i++) {
-        out[i] = pcm[i] / 32768;
+  getFloatPCM(frames) {
+    /*
+     * 通常の再生PCM。
+     * ここは既存の安定した再生処理を維持する。
+     */
+    const pcm =
+      GMECore.getSamples(frames * 2);
+
+    /*
+     * 音源CHごとのレベルを取得。
+     */
+    const levels =
+      GMECore.getVoiceLevels(frames);
+
+    /*
+     * デバッグ表示。
+     *
+     * C/WASM側から実際にどんな値が
+     * JavaScriptへ届いているか確認する。
+     */
+    console.log(
+      "[NSF JS] voice levels =",
+      levels
+    );
+
+    if (levels.length) {
+      this.voiceLevels =
+        Array.from(levels);
+    }
+
+    /*
+     * 保存された値も確認する。
+     */
+    console.log(
+      "[NSF JS] stored voiceLevels =",
+      this.voiceLevels
+    );
+
+    /*
+     * 通常のPCMをFloat32へ変換。
+     */
+    const out =
+      new Float32Array(pcm.length);
+
+    for (
+      let i = 0;
+      i < pcm.length;
+      i++
+    ) {
+      out[i] =
+        pcm[i] / 32768;
     }
 
     return out;
-}
+  },
 
-  getInfo() { return this.info; },
-  getVoiceNames() { return this.voiceNames; },
-  getVoiceLevels() { return this.voiceLevels; },
-  isMultiChannel() { return GMECore.isMultiChannel(); }
+  getInfo() {
+    return this.info;
+  },
+
+  getVoiceNames() {
+    return this.voiceNames;
+  },
+
+  getVoiceLevels() {
+    return this.voiceLevels;
+  },
+
+  isMultiChannel() {
+    return GMECore.isMultiChannel();
+  }
 };
+
 window.NSFEngine = NSFEngine;
