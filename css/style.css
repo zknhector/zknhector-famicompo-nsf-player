@@ -232,7 +232,7 @@ main {
     width: 0%;
     height: 100%;
     background: linear-gradient(90deg, #4bff88 0%, #dfff52 72%, #ff4d4d 100%);
-    transition: width 45ms linear;
+    transition: none;
 }
 
 .voice-db {
