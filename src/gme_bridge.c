@@ -9,6 +9,7 @@ typedef struct {
     Music_Emu* emu;
     Music_Emu* meter_emu;
     int voice_count;
+    int multi_channel;
 } BridgeHandle;
 
 static BridgeHandle* get_handle(int handle) {
@@ -37,6 +38,7 @@ int nsf_bridge_open(const void* data, int size) {
     h->emu = NULL;
     h->meter_emu = NULL;
     h->voice_count = 0;
+    h->multi_channel = 0;
 
     err = gme_open_data(data, size, &h->emu, 48000);
 
@@ -51,11 +53,21 @@ int nsf_bridge_open(const void* data, int size) {
      * This lets us inspect individual voices without changing the stable
      * stereo playback path.
      */
-    type_name = gme_identify_header(data);
-
-    if (type_name && strcmp(type_name, "NSF") == 0) {
+    /* Use the actual file signature instead of relying on identify_header()
+       for the visualization emulator. NSFe files are especially important
+       here because the header name returned by libgme can vary by version. */
+    if (size >= 5 &&
+        ((const unsigned char*)data)[0] == 'N' &&
+        ((const unsigned char*)data)[1] == 'E' &&
+        ((const unsigned char*)data)[2] == 'S' &&
+        ((const unsigned char*)data)[3] == 'M' &&
+        ((const unsigned char*)data)[4] == 0x1A) {
         type = gme_nsf_type;
-    } else if (type_name && strcmp(type_name, "NSFe") == 0) {
+    } else if (size >= 4 &&
+               ((const unsigned char*)data)[0] == 'N' &&
+               ((const unsigned char*)data)[1] == 'S' &&
+               ((const unsigned char*)data)[2] == 'F' &&
+               ((const unsigned char*)data)[3] == 'E') {
         type = gme_nsfe_type;
     }
 
@@ -69,6 +81,7 @@ int nsf_bridge_open(const void* data, int size) {
                 gme_delete(h->meter_emu);
                 h->meter_emu = NULL;
             } else {
+                h->multi_channel = gme_multi_channel(h->meter_emu);
                 h->voice_count = gme_voice_count(h->meter_emu);
             }
         }
@@ -102,7 +115,10 @@ int nsf_bridge_start(int handle, int track) {
     }
 
     if (h->meter_emu) {
-        gme_start_track(h->meter_emu, track);
+        gme_err_t meter_err = gme_start_track(h->meter_emu, track);
+        if (meter_err) {
+            h->multi_channel = 0;
+        }
     }
 
     return 1;
@@ -124,21 +140,43 @@ int nsf_bridge_play(int handle, int sample_count, short* out) {
 int nsf_bridge_voice_count(int handle) {
     BridgeHandle* h = get_handle(handle);
 
-    if (!h || !h->meter_emu) {
+    if (!h) {
         return 0;
     }
 
-    return h->voice_count;
+    if (h->voice_count > 0) {
+        return h->voice_count;
+    }
+
+    if (h->emu) {
+        return gme_voice_count(h->emu);
+    }
+
+    return 0;
+}
+
+int nsf_bridge_multi_channel(int handle) {
+    BridgeHandle* h = get_handle(handle);
+    if (!h || !h->meter_emu) return 0;
+    return h->multi_channel;
 }
 
 const char* nsf_bridge_voice_name(int handle, int index) {
     BridgeHandle* h = get_handle(handle);
 
-    if (!h || !h->meter_emu || index < 0 || index >= h->voice_count) {
+    if (!h || index < 0) {
         return "";
     }
 
-    return gme_voice_name(h->meter_emu, index);
+    if (h->meter_emu && index < h->voice_count) {
+        return gme_voice_name(h->meter_emu, index);
+    }
+
+    if (h->emu && index < gme_voice_count(h->emu)) {
+        return gme_voice_name(h->emu, index);
+    }
+
+    return "";
 }
 
 /*
@@ -150,6 +188,7 @@ const char* nsf_bridge_voice_name(int handle, int index) {
 int nsf_bridge_voice_levels(int handle, int frame_count, float* levels) {
     BridgeHandle* h = get_handle(handle);
     int voices;
+    const int output_voices = 8;
     long sample_count;
     short* samples;
     gme_err_t err;
@@ -169,7 +208,9 @@ int nsf_bridge_voice_levels(int handle, int frame_count, float* levels) {
     }
 
     /* Each voice occupies a stereo pair in multi-channel mode. */
-    sample_count = (long)frame_count * voices * 2;
+    /* Multi-channel gme_play() reserves eight stereo voice slots.
+       gme_voice_count() tells us how many are actually meaningful. */
+    sample_count = (long)frame_count * output_voices * 2;
     samples = (short*)malloc((size_t)sample_count * sizeof(short));
 
     if (!samples) {
@@ -187,7 +228,7 @@ int nsf_bridge_voice_levels(int handle, int frame_count, float* levels) {
         double sum = 0.0;
 
         for (int f = 0; f < frame_count; f++) {
-            long base = ((long)f * voices + v) * 2;
+            long base = ((long)f * output_voices + v) * 2;
             double left = samples[base] / 32768.0;
             double right = samples[base + 1] / 32768.0;
             double mono = (left + right) * 0.5;
