@@ -9,6 +9,7 @@ await NSFLibrary.init();
 this.songs = [...NSFLibrary.songs];
 
 this.bindUI();
+this.initVisualizer();
 this.render();
   
 },
@@ -206,6 +207,174 @@ for (const song of this.songs) {
 
 },
 
+initVisualizer() {
+  this.spectrumCanvas = document.getElementById("spectrum-canvas");
+  this.spectrumContext = this.spectrumCanvas
+    ? this.spectrumCanvas.getContext("2d")
+    : null;
+
+  this.visualizerStatus = document.getElementById("visualizer-status");
+  this.voiceCountElement = document.getElementById("voice-count");
+  this.voiceMeterList = document.getElementById("voice-meter-list");
+
+  this.resizeVisualizer();
+  window.addEventListener("resize", () => this.resizeVisualizer());
+
+  this.drawVisualizer();
+},
+
+resizeVisualizer() {
+  if (!this.spectrumCanvas || !this.spectrumContext) return;
+
+  const rect = this.spectrumCanvas.getBoundingClientRect();
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  this.spectrumCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  this.spectrumCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  this.spectrumContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+},
+
+drawVisualizer() {
+  if (!this.spectrumCanvas || !this.spectrumContext) return;
+
+  const ctx = this.spectrumContext;
+  const width = this.spectrumCanvas.clientWidth;
+  const height = this.spectrumCanvas.clientHeight;
+
+  ctx.clearRect(0, 0, width, height);
+
+  const data = NSFPlayer.getSpectrumData();
+  const bars = data ? Math.min(48, data.length) : 48;
+  const step = data ? data.length / bars : 1;
+  const gap = 3;
+  const barWidth = Math.max(2, (width - gap * (bars - 1)) / bars);
+
+  for (let i = 0; i < bars; i++) {
+    let value = 0;
+
+    if (data) {
+      const start = Math.floor(i * step);
+      const end = Math.max(start + 1, Math.floor((i + 1) * step));
+
+      for (let j = start; j < end && j < data.length; j++) {
+        value = Math.max(value, data[j] / 255);
+      }
+    }
+
+    const shaped = Math.pow(value, 0.72);
+    const barHeight = Math.max(2, shaped * (height - 12));
+    const x = i * (barWidth + gap);
+    const y = height - barHeight;
+
+    const gradient = ctx.createLinearGradient(0, y, 0, height);
+    gradient.addColorStop(0, "#ff3b3b");
+    gradient.addColorStop(0.45, "#ffd83d");
+    gradient.addColorStop(1, "#35ff8a");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    ctx.fillRect(x, y, barWidth, 2);
+  }
+
+  if (this.visualizerStatus) {
+    this.visualizerStatus.textContent = NSFPlayer.playing ? "PLAY" : "READY";
+  }
+
+  requestAnimationFrame(() => this.drawVisualizer());
+},
+
+renderVoiceMeters() {
+  if (!this.voiceMeterList) return;
+
+  const names = NSFEngine.getVoiceNames();
+  this.voiceMeterList.textContent = "";
+
+  if (!names.length) {
+    const empty = document.createElement("p");
+    empty.className = "voice-empty";
+    empty.textContent = "この曲の音源CH情報を取得できません";
+    this.voiceMeterList.appendChild(empty);
+
+    if (this.voiceCountElement) {
+      this.voiceCountElement.textContent = "0 CH";
+    }
+
+    return;
+  }
+
+  if (this.voiceCountElement) {
+    this.voiceCountElement.textContent = `${names.length} CH`;
+  }
+
+  names.forEach((name, index) => {
+    const row = document.createElement("div");
+    row.className = "voice-row";
+
+    const label = document.createElement("div");
+    label.className = "voice-name";
+    label.textContent = name || `CH ${index + 1}`;
+
+    const bar = document.createElement("div");
+    bar.className = "voice-bar";
+
+    const fill = document.createElement("div");
+    fill.className = "voice-fill";
+    fill.dataset.voiceIndex = String(index);
+    bar.appendChild(fill);
+
+    const db = document.createElement("div");
+    db.className = "voice-db";
+    db.dataset.voiceDbIndex = String(index);
+    db.textContent = "-∞ dB";
+
+    row.appendChild(label);
+    row.appendChild(bar);
+    row.appendChild(db);
+
+    this.voiceMeterList.appendChild(row);
+  });
+
+  this.clearVoiceLevels();
+},
+
+updateVoiceLevels(levels) {
+  if (!this.voiceMeterList) return;
+
+  const values = Array.from(levels || []);
+
+  this.voiceMeterList
+    .querySelectorAll(".voice-fill")
+    .forEach(fill => {
+      const index = Number(fill.dataset.voiceIndex);
+      const level = Math.max(0, Math.min(1, values[index] || 0));
+      fill.style.width = `${Math.round(level * 100)}%`;
+    });
+
+  this.voiceMeterList
+    .querySelectorAll(".voice-db")
+    .forEach(db => {
+      const index = Number(db.dataset.voiceDbIndex);
+      const level = Math.max(0, Math.min(1, values[index] || 0));
+
+      if (level <= 0.00001) {
+        db.textContent = "-∞ dB";
+        return;
+      }
+
+      const decibels = 20 * Math.log10(level);
+      db.textContent = `${decibels.toFixed(1)} dB`;
+    });
+},
+
+clearVoiceLevels() {
+  if (!this.voiceMeterList) return;
+
+  this.updateVoiceLevels([]);
+},
+
+
 updateInfo() {
 const info = NSFPlayer.getInfo();
 
@@ -240,6 +409,8 @@ document.getElementById("track").textContent =
 
 document.getElementById("extension").textContent =
   info.format || "-";
+
+this.renderVoiceMeters();
 
 }
 };
