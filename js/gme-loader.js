@@ -14,6 +14,7 @@ const GMELoader = {
   getPCM(samples) { return LibGME.play(samples); },
   getVoiceNames() { return LibGME.getVoiceNames(); },
   getVoiceLevels(frames) { return LibGME.getVoiceLevels(frames); },
+  isMultiChannel() { return LibGME.isMultiChannel(); },
   start(track) { return LibGME.startTrack(track); },
   stop() { LibGME.stop(); },
   close() { LibGME.close(); }
