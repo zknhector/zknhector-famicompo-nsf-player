@@ -61,6 +61,7 @@ const NSFEngine = {
 
   getInfo() { return this.info; },
   getVoiceNames() { return this.voiceNames; },
-  getVoiceLevels() { return this.voiceLevels; }
+  getVoiceLevels() { return this.voiceLevels; },
+  isMultiChannel() { return GMECore.isMultiChannel(); }
 };
 window.NSFEngine = NSFEngine;
