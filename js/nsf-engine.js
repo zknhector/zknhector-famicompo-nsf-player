@@ -46,18 +46,26 @@ const NSFEngine = {
     return !this.playing || GMECore.startTrack(track);
   },
 
-  getFloatPCM(frames) {
+getFloatPCM(frames) {
     const pcm = GMECore.getSamples(frames * 2);
     const levels = GMECore.getVoiceLevels(frames);
 
+    console.log("[NSF JS] voice levels =", levels);
+
     if (levels.length) {
-      this.voiceLevels = Array.from(levels);
+        this.voiceLevels = Array.from(levels);
     }
 
+    console.log("[NSF JS] stored voiceLevels =", this.voiceLevels);
+
     const out = new Float32Array(pcm.length);
-    for (let i = 0; i < pcm.length; i++) out[i] = pcm[i] / 32768;
+
+    for (let i = 0; i < pcm.length; i++) {
+        out[i] = pcm[i] / 32768;
+    }
+
     return out;
-  },
+}
 
   getInfo() { return this.info; },
   getVoiceNames() { return this.voiceNames; },
