@@ -10,8 +10,10 @@ const GMELoader = {
     return LibGME.open(buffer);
   },
   getTrackCount() { return LibGME.getTrackCount(); },
-  getTrackInfo(track) { return LibGME.getTrackInfo(track); },
+  getTrackInfo(track) { return LibGME.getTrackInfo?.(track); },
   getPCM(samples) { return LibGME.play(samples); },
+  getVoiceNames() { return LibGME.getVoiceNames(); },
+  getVoiceLevels(frames) { return LibGME.getVoiceLevels(frames); },
   start(track) { return LibGME.startTrack(track); },
   stop() { LibGME.stop(); },
   close() { LibGME.close(); }
