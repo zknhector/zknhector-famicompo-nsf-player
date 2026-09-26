@@ -4,6 +4,8 @@ const NSFEngine = {
   currentTrack: 0,
   trackCount: 0,
   info: null,
+  voiceNames: [],
+  voiceLevels: [],
 
   async init() {
     this.ready = await GMECore.init();
@@ -22,6 +24,8 @@ const NSFEngine = {
       Math.max(0, this.trackCount - 1)
     );
     this.info = parsed;
+    this.voiceNames = GMECore.getVoiceNames();
+    this.voiceLevels = new Array(this.voiceNames.length).fill(0);
     return true;
   },
 
@@ -44,11 +48,19 @@ const NSFEngine = {
 
   getFloatPCM(frames) {
     const pcm = GMECore.getSamples(frames * 2);
+    const levels = GMECore.getVoiceLevels(frames);
+
+    if (levels.length) {
+      this.voiceLevels = Array.from(levels);
+    }
+
     const out = new Float32Array(pcm.length);
     for (let i = 0; i < pcm.length; i++) out[i] = pcm[i] / 32768;
     return out;
   },
 
-  getInfo() { return this.info; }
+  getInfo() { return this.info; },
+  getVoiceNames() { return this.voiceNames; },
+  getVoiceLevels() { return this.voiceLevels; }
 };
 window.NSFEngine = NSFEngine;
