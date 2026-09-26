@@ -217,10 +217,15 @@ initVisualizer() {
   this.voiceCountElement = document.getElementById("voice-count");
   this.voiceMeterList = document.getElementById("voice-meter-list");
 
+  this.voiceTargetLevels = [];
+  this.voiceDisplayLevels = [];
+  this.voiceAnimationTime = performance.now();
+
   this.resizeVisualizer();
   window.addEventListener("resize", () => this.resizeVisualizer());
 
   this.drawVisualizer();
+  this.animateVoiceMeters();
 },
 
 resizeVisualizer() {
@@ -336,42 +341,79 @@ renderVoiceMeters() {
     this.voiceMeterList.appendChild(row);
   });
 
+  this.voiceTargetLevels = new Array(names.length).fill(0);
+  this.voiceDisplayLevels = new Array(names.length).fill(0);
   this.clearVoiceLevels();
 },
 
 updateVoiceLevels(levels) {
-  if (!this.voiceMeterList) return;
-
   const values = Array.from(levels || []);
 
-  this.voiceMeterList
-    .querySelectorAll(".voice-fill")
-    .forEach(fill => {
-      const index = Number(fill.dataset.voiceIndex);
-      const level = Math.max(0, Math.min(1, values[index] || 0));
-      fill.style.width = `${Math.round(level * 100)}%`;
-    });
+  this.voiceTargetLevels = values.map(value =>
+    Math.max(0, Math.min(1, Number(value) || 0))
+  );
 
-  this.voiceMeterList
-    .querySelectorAll(".voice-db")
-    .forEach(db => {
-      const index = Number(db.dataset.voiceDbIndex);
-      const level = Math.max(0, Math.min(1, values[index] || 0));
+  if (this.voiceDisplayLevels.length !== this.voiceTargetLevels.length) {
+    this.voiceDisplayLevels = new Array(this.voiceTargetLevels.length).fill(0);
+  }
+},
 
-      if (level <= 0.00001) {
-        db.textContent = "-∞ dB";
-        return;
-      }
+animateVoiceMeters(now = performance.now()) {
+  const dt = Math.max(0.001, Math.min(0.1, (now - this.voiceAnimationTime) / 1000));
+  this.voiceAnimationTime = now;
 
-      const decibels = 20 * Math.log10(level);
-      db.textContent = `${decibels.toFixed(1)} dB`;
-    });
+  const targets = this.voiceTargetLevels || [];
+
+  if (this.voiceDisplayLevels.length !== targets.length) {
+    this.voiceDisplayLevels = new Array(targets.length).fill(0);
+  }
+
+  // Fast attack, slower release: this makes each CH feel like a real
+  // hardware level meter instead of jumping between sampled values.
+  const attack = 1 - Math.exp(-dt / 0.035);
+  const release = 1 - Math.exp(-dt / 0.18);
+
+  for (let i = 0; i < targets.length; i++) {
+    const target = Math.max(0, Math.min(1, targets[i] || 0));
+    const current = this.voiceDisplayLevels[i] || 0;
+    const factor = target > current ? attack : release;
+
+    this.voiceDisplayLevels[i] =
+      current + (target - current) * factor;
+  }
+
+  if (this.voiceMeterList) {
+    this.voiceMeterList
+      .querySelectorAll(".voice-fill")
+      .forEach(fill => {
+        const index = Number(fill.dataset.voiceIndex);
+        const level = this.voiceDisplayLevels[index] || 0;
+        fill.style.width = `${Math.round(level * 1000) / 10}%`;
+      });
+
+    this.voiceMeterList
+      .querySelectorAll(".voice-db")
+      .forEach(db => {
+        const index = Number(db.dataset.voiceDbIndex);
+        const level = this.voiceDisplayLevels[index] || 0;
+
+        if (level <= 0.00001) {
+          db.textContent = "-∞ dB";
+          return;
+        }
+
+        const decibels = 20 * Math.log10(level);
+        db.textContent = `${decibels.toFixed(1)} dB`;
+      });
+  }
+
+  requestAnimationFrame(next => this.animateVoiceMeters(next));
 },
 
 clearVoiceLevels() {
-  if (!this.voiceMeterList) return;
-
-  this.updateVoiceLevels([]);
+  this.voiceTargetLevels = new Array(
+    this.voiceDisplayLevels?.length || 0
+  ).fill(0);
 },
 
 
