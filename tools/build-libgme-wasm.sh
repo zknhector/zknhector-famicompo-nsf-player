@@ -45,7 +45,7 @@ em++ -O3 \
   -sEXPORT_NAME=GME \
   -sENVIRONMENT=web \
   -sALLOW_MEMORY_GROWTH=1 \
-  -sEXPORTED_FUNCTIONS='["_malloc","_free","_nsf_bridge_open","_nsf_bridge_track_count","_nsf_bridge_start","_nsf_bridge_play","_nsf_bridge_stop","_nsf_bridge_delete","_nsf_bridge_info","_nsf_bridge_voice_count","_nsf_bridge_voice_name","_nsf_bridge_voice_levels"]' \
+  -sEXPORTED_FUNCTIONS='["_malloc","_free","_nsf_bridge_open","_nsf_bridge_track_count","_nsf_bridge_start","_nsf_bridge_play","_nsf_bridge_stop","_nsf_bridge_delete","_nsf_bridge_info","_nsf_bridge_voice_count","_nsf_bridge_voice_name","_nsf_bridge_voice_levels","_nsf_bridge_multi_channel"]' \
   -sEXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPU8","HEAP16","HEAPF32","UTF8ToString"]'
 
 echo "Built:"
