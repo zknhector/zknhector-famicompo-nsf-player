@@ -192,8 +192,17 @@ main {
 #voice-meter-list {
     height: calc(100% - 28px);
     overflow-y: auto;
+    overflow-x: hidden;
     padding-right: 4px;
     font-family: "Courier New", monospace;
+
+    /* CH数が増えたときは横にも展開して、できるだけ多くを一画面に収める */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    align-content: start;
+    align-items: start;
+    column-gap: 10px;
+    row-gap: 2px;
 }
 
 .voice-empty {
@@ -201,15 +210,17 @@ main {
     color: #777;
     text-align: center;
     font-size: 13px;
+    grid-column: 1 / -1;
 }
 
 .voice-row {
     display: grid;
-    grid-template-columns: minmax(95px, 0.9fr) minmax(0, 2.4fr) 48px;
+    grid-template-columns: minmax(68px, 0.9fr) minmax(0, 2.4fr) 44px;
     align-items: center;
-    gap: 8px;
-    min-height: 28px;
-    padding: 3px 0;
+    gap: 6px;
+    min-width: 0;
+    min-height: 24px;
+    padding: 1px 0;
 }
 
 .voice-name {
@@ -217,11 +228,12 @@ main {
     text-overflow: ellipsis;
     white-space: nowrap;
     color: #aaa;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .voice-bar {
-    height: 13px;
+    min-width: 0;
+    height: 12px;
     padding: 2px;
     background: #090909;
     border: 1px solid #303030;
@@ -239,6 +251,7 @@ main {
     color: #777;
     font-size: 10px;
     text-align: right;
+    white-space: nowrap;
 }
 
 @media (max-width: 1200px) {
@@ -248,6 +261,16 @@ main {
 
     #visualizer-panel {
         gap: 10px;
+    }
+
+    #voice-meter-list {
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        column-gap: 8px;
+    }
+
+    .voice-row {
+        grid-template-columns: minmax(58px, 0.9fr) minmax(0, 2.4fr) 42px;
+        gap: 5px;
     }
 }
 
@@ -868,6 +891,16 @@ button {
 
     #voice-section {
         min-height: 250px;
+    }
+
+    #voice-meter-list {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 2px;
+    }
+
+    .voice-row {
+        grid-template-columns: minmax(72px, 0.9fr) minmax(0, 2.4fr) 44px;
+        min-height: 24px;
     }
 
     #info {
