@@ -11,7 +11,7 @@ this.songs = [...NSFLibrary.songs];
 this.bindUI();
 this.initVisualizer();
 this.render();
-
+  
 },
 
 bindUI() {
@@ -19,24 +19,26 @@ const input =
 document.getElementById("file-input");
 
 input.addEventListener("change", e => {
-this.loadFiles(e.target.files);
+  this.loadFiles(e.target.files);
 });
 
 document.getElementById("play").onclick = () => {
-NSFPlayer.play();
+  NSFPlayer.play();
 };
 
 document.getElementById("stop").onclick = () => {
-NSFPlayer.stop();
+  NSFPlayer.stop();
 };
 
 document.getElementById("prev").onclick = () => {
-this.changeTrack(-1);
+  this.changeTrack(-1);
 };
 
 document.getElementById("next").onclick = () => {
-this.changeTrack(1);
+  this.changeTrack(1);
 };
+
+
 
 },
 
@@ -49,21 +51,21 @@ return;
 const count = NSFEngine.trackCount;
 
 if (!count || count <= 1) {
-console.log(
-"This NSF has only one track"
-);
-return;
+  console.log(
+    "This NSF has only one track"
+  );
+  return;
 }
 
 let track =
-NSFEngine.currentTrack + direction;
+  NSFEngine.currentTrack + direction;
 
 if (track < 0) {
-track = count - 1;
+  track = count - 1;
 }
 
 if (track >= count) {
-track = 0;
+  track = 0;
 }
 
 const wasPlaying = NSFPlayer.playing;
@@ -71,21 +73,21 @@ const wasPlaying = NSFPlayer.playing;
 NSFPlayer.stop();
 
 if (!NSFEngine.setTrack(track)) {
-console.error(
-"Track change failed:",
-track
-);
-return;
+  console.error(
+    "Track change failed:",
+    track
+  );
+  return;
 }
 
 console.log(
-`Track changed: ${track + 1} / ${count}`
+  `Track changed: ${track + 1} / ${count}`
 );
 
 this.updateInfo();
 
 if (wasPlaying) {
-await NSFPlayer.play();
+  await NSFPlayer.play();
 }
 
 },
@@ -95,33 +97,33 @@ let added = 0;
 let duplicates = 0;
 
 for (const file of files) {
-if (!/.(nsf|nsfe)$/i.test(file.name)) {
-continue;
-}
+  if (!/\.(nsf|nsfe)$/i.test(file.name)) {
+    continue;
+  }
 
-const song = await NSFLibrary.add({
-filename: file.name,
-file
-});
+  const song = await NSFLibrary.add({
+    filename: file.name,
+    file
+  });
 
-if (song) {
-this.songs.push(song);
-added++;
-} else {
-duplicates++;
-}
+  if (song) {
+    this.songs.push(song);
+    added++;
+  } else {
+    duplicates++;
+  }
 }
 
 this.render();
 
 if (duplicates > 0) {
-console.log(
-`重複ファイル ${duplicates} 件をスキップしました`
-);
+  console.log(
+    `重複ファイル ${duplicates} 件をスキップしました`
+  );
 }
 
 console.log(
-`Library: ${added} added, ${duplicates} duplicate(s) skipped`
+  `Library: ${added} added, ${duplicates} duplicate(s) skipped`
 );
 
 },
@@ -132,9 +134,9 @@ return;
 }
 
 if (this.currentSong?.id === song.id) {
-NSFPlayer.stop();
-NSFPlayer.currentSong = null;
-this.currentSong = null;
+  NSFPlayer.stop();
+  NSFPlayer.currentSong = null;
+  this.currentSong = null;
 }
 
 await NSFLibrary.remove(song.id);
@@ -152,295 +154,268 @@ document.getElementById("song-list");
 list.textContent = "";
 
 if (!this.songs.length) {
-const li = document.createElement("li");
+  const li = document.createElement("li");
 
-li.textContent =
-"まだ曲がありません";
+  li.textContent =
+    "まだ曲がありません";
 
-list.appendChild(li);
+  list.appendChild(li);
 
-return;
+  return;
 }
 
 for (const song of this.songs) {
-const li = document.createElement("li");
+  const li = document.createElement("li");
 
-const name =
-document.createElement("span");
+  const name =
+    document.createElement("span");
 
-name.textContent = song.filename;
+  name.textContent = song.filename;
 
-const remove =
-document.createElement("button");
+  const remove =
+    document.createElement("button");
 
-remove.textContent = "🗑";
-remove.title = "この曲をライブラリから削除";
+  remove.textContent = "🗑";
+  remove.title = "この曲をライブラリから削除";
 
-remove.onclick = async event => {
-event.stopPropagation();
+  remove.onclick = async event => {
+    event.stopPropagation();
 
+    await this.removeSong(song);
+  };
 
-await this.removeSong(song);
+  li.appendChild(name);
+  li.appendChild(remove);
 
+  li.onclick = async () => {
+    this.currentSong = song;
 
-};
+    try {
+      await NSFPlayer.load(song);
+      this.updateInfo();
+    } catch (error) {
+      console.error(error);
 
-li.appendChild(name);
-li.appendChild(remove);
+      alert(
+        "このファイルを読み込めませんでした。"
+      );
+    }
+  };
 
-li.onclick = async () => {
-this.currentSong = song;
-
-
-try {
-  await NSFPlayer.load(song);
-  this.updateInfo();
-} catch (error) {
-  console.error(error);
-
-  alert(
-    "このファイルを読み込めませんでした。"
-  );
-}
-
-
-};
-
-list.appendChild(li);
+  list.appendChild(li);
 }
 
 },
 
 initVisualizer() {
-this.spectrumCanvas = document.getElementById("spectrum-canvas");
-this.spectrumContext = this.spectrumCanvas
-? this.spectrumCanvas.getContext("2d")
-: null;
+  this.spectrumCanvas = document.getElementById("spectrum-canvas");
+  this.spectrumContext = this.spectrumCanvas
+    ? this.spectrumCanvas.getContext("2d")
+    : null;
 
-this.visualizerStatus = document.getElementById("visualizer-status");
-this.voiceCountElement = document.getElementById("voice-count");
-this.voiceMeterList = document.getElementById("voice-meter-list");
+  this.visualizerStatus = document.getElementById("visualizer-status");
+  this.voiceCountElement = document.getElementById("voice-count");
+  this.voiceMeterList = document.getElementById("voice-meter-list");
 
-this.voiceTargetLevels = [];
-this.voiceDisplayLevels = [];
-this.voiceAnimationTime = performance.now();
+  this.voiceTargetLevels = [];
+  this.voiceDisplayLevels = [];
+  this.voiceAnimationTime = performance.now();
 
-this.resizeVisualizer();
-window.addEventListener("resize", () => this.resizeVisualizer());
+  this.resizeVisualizer();
+  window.addEventListener("resize", () => this.resizeVisualizer());
 
-this.drawVisualizer();
-this.animateVoiceMeters();
+  this.drawVisualizer();
+  this.animateVoiceMeters();
 },
 
 resizeVisualizer() {
-if (!this.spectrumCanvas || !this.spectrumContext) return;
+  if (!this.spectrumCanvas || !this.spectrumContext) return;
 
-const rect = this.spectrumCanvas.getBoundingClientRect();
-const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  const rect = this.spectrumCanvas.getBoundingClientRect();
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
-this.spectrumCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
-this.spectrumCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
-this.spectrumContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+  this.spectrumCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  this.spectrumCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  this.spectrumContext.setTransform(dpr, 0, 0, dpr, 0, 0);
 },
 
 drawVisualizer() {
-if (!this.spectrumCanvas || !this.spectrumContext) return;
+  if (!this.spectrumCanvas || !this.spectrumContext) return;
 
-const ctx = this.spectrumContext;
-const width = this.spectrumCanvas.clientWidth;
-const height = this.spectrumCanvas.clientHeight;
+  const ctx = this.spectrumContext;
+  const width = this.spectrumCanvas.clientWidth;
+  const height = this.spectrumCanvas.clientHeight;
 
-ctx.clearRect(0, 0, width, height);
+  ctx.clearRect(0, 0, width, height);
 
-const data = NSFPlayer.getSpectrumData();
-const bars = data ? Math.min(48, data.length) : 48;
-const step = data ? data.length / bars : 1;
-const gap = 3;
-const barWidth = Math.max(2, (width - gap * (bars - 1)) / bars);
+  const data = NSFPlayer.getSpectrumData();
+  const bars = data ? Math.min(48, data.length) : 48;
+  const step = data ? data.length / bars : 1;
+  const gap = 3;
+  const barWidth = Math.max(2, (width - gap * (bars - 1)) / bars);
 
-for (let i = 0; i < bars; i++) {
-let value = 0;
+  for (let i = 0; i < bars; i++) {
+    let value = 0;
 
+    if (data) {
+      const start = Math.floor(i * step);
+      const end = Math.max(start + 1, Math.floor((i + 1) * step));
 
-if (data) {
-  const start = Math.floor(i * step);
-  const end = Math.max(start + 1, Math.floor((i + 1) * step));
+      for (let j = start; j < end && j < data.length; j++) {
+        value = Math.max(value, data[j] / 255);
+      }
+    }
 
-  for (let j = start; j < end && j < data.length; j++) {
-    value = Math.max(value, data[j] / 255);
+    const shaped = Math.pow(value, 0.72);
+    const barHeight = Math.max(2, shaped * (height - 12));
+    const x = i * (barWidth + gap);
+    const y = height - barHeight;
+
+    const gradient = ctx.createLinearGradient(0, y, 0, height);
+    gradient.addColorStop(0, "#ff3b3b");
+    gradient.addColorStop(0.45, "#ffd83d");
+    gradient.addColorStop(1, "#35ff8a");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    ctx.fillRect(x, y, barWidth, 2);
   }
-}
 
-const shaped = Math.pow(value, 0.72);
-const barHeight = Math.max(2, shaped * (height - 12));
-const x = i * (barWidth + gap);
-const y = height - barHeight;
+  if (this.visualizerStatus) {
+    this.visualizerStatus.textContent = NSFPlayer.playing ? "PLAY" : "READY";
+  }
 
-const gradient = ctx.createLinearGradient(0, y, 0, height);
-gradient.addColorStop(0, "#ff3b3b");
-gradient.addColorStop(0.45, "#ffd83d");
-gradient.addColorStop(1, "#35ff8a");
-
-ctx.fillStyle = gradient;
-ctx.fillRect(x, y, barWidth, barHeight);
-
-ctx.fillStyle = "rgba(255,255,255,0.14)";
-ctx.fillRect(x, y, barWidth, 2);
-
-
-}
-
-if (this.visualizerStatus) {
-this.visualizerStatus.textContent = NSFPlayer.playing ? "PLAY" : "READY";
-}
-
-requestAnimationFrame(() => this.drawVisualizer());
+  requestAnimationFrame(() => this.drawVisualizer());
 },
 
 renderVoiceMeters() {
-if (!this.voiceMeterList) return;
+  if (!this.voiceMeterList) return;
 
-const names = NSFEngine.getVoiceNames();
-this.voiceMeterList.textContent = "";
+  const names = NSFEngine.getVoiceNames();
+  this.voiceMeterList.textContent = "";
 
-if (!names.length) {
-const empty = document.createElement("p");
-empty.className = "voice-empty";
-empty.textContent = "この曲の音源CH情報を取得できません";
-this.voiceMeterList.appendChild(empty);
+  if (!names.length) {
+    const empty = document.createElement("p");
+    empty.className = "voice-empty";
+    empty.textContent = "この曲の音源CH情報を取得できません";
+    this.voiceMeterList.appendChild(empty);
 
+    if (this.voiceCountElement) {
+      this.voiceCountElement.textContent = "0 CH";
+    }
 
-if (this.voiceCountElement) {
-  this.voiceCountElement.textContent = "0 CH";
-}
+    return;
+  }
 
-return;
+  if (this.voiceCountElement) {
+    this.voiceCountElement.textContent = `${names.length} CH`;
+  }
 
+  names.forEach((name, index) => {
+    const row = document.createElement("div");
+    row.className = "voice-row";
 
-}
+    const label = document.createElement("div");
+    label.className = "voice-name";
+    label.textContent = name || `CH ${index + 1}`;
 
-if (this.voiceCountElement) {
-this.voiceCountElement.textContent = `${names.length} CH`;
-}
+    const bar = document.createElement("div");
+    bar.className = "voice-bar";
 
-names.forEach((name, index) => {
-const row = document.createElement("div");
-row.className = "voice-row";
+    const fill = document.createElement("div");
+    fill.className = "voice-fill";
+    fill.dataset.voiceIndex = String(index);
+    bar.appendChild(fill);
 
+    const db = document.createElement("div");
+    db.className = "voice-db";
+    db.dataset.voiceDbIndex = String(index);
+    db.textContent = "-∞ dB";
 
-const label = document.createElement("div");
-label.className = "voice-name";
-label.textContent = name || `CH ${index + 1}`;
+    row.appendChild(label);
+    row.appendChild(bar);
+    row.appendChild(db);
 
-const bar = document.createElement("div");
-bar.className = "voice-bar";
+    this.voiceMeterList.appendChild(row);
+  });
 
-const fill = document.createElement("div");
-fill.className = "voice-fill";
-fill.dataset.voiceIndex = String(index);
-bar.appendChild(fill);
-
-const db = document.createElement("div");
-db.className = "voice-db";
-db.dataset.voiceDbIndex = String(index);
-db.textContent = "-∞ dB";
-
-row.appendChild(label);
-row.appendChild(bar);
-row.appendChild(db);
-
-this.voiceMeterList.appendChild(row);
-
-
-});
-
-this.voiceTargetLevels = new Array(names.length).fill(0);
-this.voiceDisplayLevels = new Array(names.length).fill(0);
-this.clearVoiceLevels();
+  this.voiceTargetLevels = new Array(names.length).fill(0);
+  this.voiceDisplayLevels = new Array(names.length).fill(0);
+  this.clearVoiceLevels();
 },
 
 updateVoiceLevels(levels) {
-const values = Array.from(levels || []);
+  const values = Array.from(levels || []);
 
-this.voiceTargetLevels = values.map(value =>
-Math.max(0, Math.min(1, Number(value) || 0))
-);
+  this.voiceTargetLevels = values.map(value =>
+    Math.max(0, Math.min(1, Number(value) || 0))
+  );
 
-if (this.voiceDisplayLevels.length !== this.voiceTargetLevels.length) {
-this.voiceDisplayLevels = new Array(this.voiceTargetLevels.length).fill(0);
-}
-
-console.log(
-"[APP] updateVoiceLevels =",
-levels,
-"target =",
-this.voiceTargetLevels
-);
+  if (this.voiceDisplayLevels.length !== this.voiceTargetLevels.length) {
+    this.voiceDisplayLevels = new Array(this.voiceTargetLevels.length).fill(0);
+  }
 },
 
 animateVoiceMeters(now = performance.now()) {
-const dt = Math.max(0.001, Math.min(0.1, (now - this.voiceAnimationTime) / 1000));
-this.voiceAnimationTime = now;
+  const dt = Math.max(0.001, Math.min(0.1, (now - this.voiceAnimationTime) / 1000));
+  this.voiceAnimationTime = now;
 
-const targets = this.voiceTargetLevels || [];
+  const targets = this.voiceTargetLevels || [];
 
-if (this.voiceDisplayLevels.length !== targets.length) {
-this.voiceDisplayLevels = new Array(targets.length).fill(0);
-}
+  if (this.voiceDisplayLevels.length !== targets.length) {
+    this.voiceDisplayLevels = new Array(targets.length).fill(0);
+  }
 
-// Fast attack, slower release: this makes each CH feel like a real
-// hardware level meter instead of jumping between sampled values.
-const attack = 1 - Math.exp(-dt / 0.035);
-const release = 1 - Math.exp(-dt / 0.18);
+  // Fast attack, slower release: this makes each CH feel like a real
+  // hardware level meter instead of jumping between sampled values.
+  const attack = 1 - Math.exp(-dt / 0.035);
+  const release = 1 - Math.exp(-dt / 0.18);
 
-for (let i = 0; i < targets.length; i++) {
-const target = Math.max(0, Math.min(1, targets[i] || 0));
-const current = this.voiceDisplayLevels[i] || 0;
-const factor = target > current ? attack : release;
+  for (let i = 0; i < targets.length; i++) {
+    const target = Math.max(0, Math.min(1, targets[i] || 0));
+    const current = this.voiceDisplayLevels[i] || 0;
+    const factor = target > current ? attack : release;
 
+    this.voiceDisplayLevels[i] =
+      current + (target - current) * factor;
+  }
 
-this.voiceDisplayLevels[i] =
-  current + (target - current) * factor;
+  if (this.voiceMeterList) {
+    this.voiceMeterList
+      .querySelectorAll(".voice-fill")
+      .forEach(fill => {
+        const index = Number(fill.dataset.voiceIndex);
+        const level = this.voiceDisplayLevels[index] || 0;
+        fill.style.width = `${Math.round(level * 1000) / 10}%`;
+      });
 
+    this.voiceMeterList
+      .querySelectorAll(".voice-db")
+      .forEach(db => {
+        const index = Number(db.dataset.voiceDbIndex);
+        const level = this.voiceDisplayLevels[index] || 0;
 
-}
+        if (level <= 0.00001) {
+          db.textContent = "-∞ dB";
+          return;
+        }
 
-if (this.voiceMeterList) {
-this.voiceMeterList
-.querySelectorAll(".voice-fill")
-.forEach(fill => {
-const index = Number(fill.dataset.voiceIndex);
-const level = this.voiceDisplayLevels[index] || 0;
-fill.style.width = `${Math.round(level * 1000) / 10}%`;
-});
+        const decibels = 20 * Math.log10(level);
+        db.textContent = `${decibels.toFixed(1)} dB`;
+      });
+  }
 
-
-this.voiceMeterList
-  .querySelectorAll(".voice-db")
-  .forEach(db => {
-    const index = Number(db.dataset.voiceDbIndex);
-    const level = this.voiceDisplayLevels[index] || 0;
-
-    if (level <= 0.00001) {
-      db.textContent = "-∞ dB";
-      return;
-    }
-
-    const decibels = 20 * Math.log10(level);
-    db.textContent = `${decibels.toFixed(1)} dB`;
-  });
-
-
-}
-
-requestAnimationFrame(next => this.animateVoiceMeters(next));
+  requestAnimationFrame(next => this.animateVoiceMeters(next));
 },
 
 clearVoiceLevels() {
-this.voiceTargetLevels = new Array(
-this.voiceDisplayLevels?.length || 0
-).fill(0);
+  this.voiceTargetLevels = new Array(
+    this.voiceDisplayLevels?.length || 0
+  ).fill(0);
 },
+
 
 updateInfo() {
 const info = NSFPlayer.getInfo();
@@ -448,40 +423,42 @@ const info = NSFPlayer.getInfo();
 const trackIndex = NSFEngine.currentTrack || 0;
 
 const trackTitle =
-Array.isArray(info.trackTitles)
-? info.trackTitles[trackIndex]
-: "";
+  Array.isArray(info.trackTitles)
+    ? info.trackTitles[trackIndex]
+    : "";
 
 const trackArtist =
-Array.isArray(info.trackArtists)
-? info.trackArtists[trackIndex]
-: "";
+  Array.isArray(info.trackArtists)
+    ? info.trackArtists[trackIndex]
+    : "";
 
 document.getElementById("title").textContent =
-trackTitle || info.title || "-";
+  trackTitle || info.title || "-";
 
 document.getElementById("composer").textContent =
-trackArtist || info.artist || "-";
+  trackArtist || info.artist || "-";
 
 document.getElementById("chip").textContent =
-info.chip || "-";
+  info.chip || "-";
 
 document.getElementById("copyright").textContent =
-info.copyright || "-";
+  info.copyright || "-";
 
 document.getElementById("track").textContent =
-info.trackCount
-? `${NSFEngine.currentTrack + 1} / ${info.trackCount}`
-: "-";
+  info.trackCount
+    ? `${NSFEngine.currentTrack + 1} / ${info.trackCount}`
+    : "-";
 
 document.getElementById("extension").textContent =
-info.format || "-";
+  info.format || "-";
 
 this.renderVoiceMeters();
 
 }
 };
+
 window.App = App;
+
 window.addEventListener(
 "load",
 () => App.init().catch(console.error)
