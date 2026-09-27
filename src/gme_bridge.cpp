@@ -317,7 +317,7 @@ int nsf_bridge_voice_levels(int handle, int frame_count, float* levels) {
      * live oscillator amplitudes inside Nsf_Emu.  Playback remains completely
      * separate and unchanged.
      */
-    Nsf_Emu* nsf = dynamic_cast<Nsf_Emu*>(h->meter_emu);
+    Nsf_Emu* nsf = static_cast<Nsf_Emu*>(h->meter_emu);
     if (!nsf) {
         return 0;
     }
