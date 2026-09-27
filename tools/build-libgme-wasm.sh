@@ -38,7 +38,7 @@ mkdir -p "$OUT"
 
 em++ -O3 \
   -I"$VENDOR/gme" \
-  "$ROOT/src/gme_bridge.c" \
+  "$ROOT/src/gme_bridge.cpp" \
   "$LIBGME_A" \
   -o "$OUT/gme.js" \
   -sMODULARIZE=1 \
