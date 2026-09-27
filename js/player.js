@@ -102,16 +102,47 @@ feedAudio() {
 console.log("[PLAYER] feedAudio called");
 
 
-if (!this.playing || !this.workletNode) return;
+if (!this.playing || !this.workletNode) {
+  console.log(
+    "[PLAYER] feedAudio stopped by guard:",
+    {
+      playing: this.playing,
+      workletNode: !!this.workletNode
+    }
+  );
+
+  return;
+}
 
 try {
   const pcm = NSFEngine.getFloatPCM(2048);
 
-  if (!pcm || pcm.length === 0) return;
+  if (!pcm || pcm.length === 0) {
+    console.log(
+      "[PLAYER] getFloatPCM returned empty data"
+    );
+
+    return;
+  }
 
   this.workletNode.port.postMessage(
     pcm,
     [pcm.buffer]
+  );
+
+  /*
+   * APP 接続状態を診断
+   */
+  console.log(
+    "[PLAYER] App check:",
+    {
+      AppExists: !!window.App,
+      AppType: typeof window.App,
+      updateVoiceLevelsType:
+        window.App
+          ? typeof window.App.updateVoiceLevels
+          : "App is undefined"
+    }
   );
 
   if (
@@ -128,6 +159,14 @@ try {
 
     window.App.updateVoiceLevels(
       voiceLevels
+    );
+
+    console.log(
+      "[PLAYER] updateVoiceLevels() called successfully"
+    );
+  } else {
+    console.warn(
+      "[PLAYER] App.updateVoiceLevels is NOT available"
     );
   }
 
@@ -217,3 +256,8 @@ return NSFEngine.getInfo() || {};
 console.log("[PLAYER] player.js loaded");
 
 window.NSFPlayer = NSFPlayer;
+
+console.log(
+"[PLAYER] NSFPlayer registered:",
+!!window.NSFPlayer
+);
