@@ -347,6 +347,13 @@ renderVoiceMeters() {
 },
 
 updateVoiceLevels(levels) {
+console.log(
+  "[APP] updateVoiceLevels =",
+  levels,
+  "target =",
+  this.voiceTargetLevels
+);
+
   const values = Array.from(levels || []);
 
   this.voiceTargetLevels = values.map(value =>
