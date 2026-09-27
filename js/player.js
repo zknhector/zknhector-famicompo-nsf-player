@@ -206,5 +206,10 @@ return {};
 }
 
 
-return
+return NSFEngine.getInfo() || {};
 
+
+}
+};
+
+window.NSFPlayer = NSFPlayer;
