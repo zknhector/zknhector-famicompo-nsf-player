@@ -481,7 +481,7 @@ this.renderVoiceMeters();
 
 }
 };
-
+window.App = App;
 window.addEventListener(
 "load",
 () => App.init().catch(console.error)
