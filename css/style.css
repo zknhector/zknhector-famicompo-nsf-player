@@ -198,7 +198,7 @@ main {
 
     /* CH数が増えたときは横にも展開して、できるだけ多くを一画面に収める */
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     align-content: start;
     align-items: start;
     column-gap: 10px;
@@ -264,7 +264,7 @@ main {
     }
 
     #voice-meter-list {
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         column-gap: 8px;
     }
 
