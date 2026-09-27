@@ -99,8 +99,10 @@ return true;
 },
 
 feedAudio() {
-if (!this.playing || !this.workletNode) return;
+console.log("[PLAYER] feedAudio called");
 
+
+if (!this.playing || !this.workletNode) return;
 
 try {
   const pcm = NSFEngine.getFloatPCM(2048);
@@ -211,5 +213,7 @@ return NSFEngine.getInfo() || {};
 
 }
 };
+
+console.log("[PLAYER] player.js loaded");
 
 window.NSFPlayer = NSFPlayer;
