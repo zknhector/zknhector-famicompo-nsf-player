@@ -179,9 +179,9 @@ remove.title = "この曲をライブラリから削除";
 remove.onclick = async event => {
 event.stopPropagation();
 
-```
+
 await this.removeSong(song);
-```
+
 
 };
 
@@ -191,7 +191,7 @@ li.appendChild(remove);
 li.onclick = async () => {
 this.currentSong = song;
 
-```
+
 try {
   await NSFPlayer.load(song);
   this.updateInfo();
@@ -202,7 +202,7 @@ try {
     "このファイルを読み込めませんでした。"
   );
 }
-```
+
 
 };
 
@@ -261,7 +261,7 @@ const barWidth = Math.max(2, (width - gap * (bars - 1)) / bars);
 for (let i = 0; i < bars; i++) {
 let value = 0;
 
-```
+
 if (data) {
   const start = Math.floor(i * step);
   const end = Math.max(start + 1, Math.floor((i + 1) * step));
@@ -286,7 +286,7 @@ ctx.fillRect(x, y, barWidth, barHeight);
 
 ctx.fillStyle = "rgba(255,255,255,0.14)";
 ctx.fillRect(x, y, barWidth, 2);
-```
+
 
 }
 
