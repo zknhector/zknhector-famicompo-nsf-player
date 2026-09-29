@@ -313,9 +313,21 @@ renderVoiceMeters() {
     this.voiceCountElement.textContent = `${names.length} CH`;
   }
 
+  const noteNames = [
+    "C", "C#", "D", "D#", "E", "F",
+    "F#", "G", "G#", "A", "A#", "B"
+  ];
+  const blackNotes = new Set(["C#", "D#", "F#", "G#", "A#"]);
+  const keyStart = 36; // C2
+  const keyEnd = 83;   // B5
+
   names.forEach((name, index) => {
     const row = document.createElement("div");
     row.className = "voice-row";
+    row.dataset.voiceIndex = String(index);
+
+    const head = document.createElement("div");
+    head.className = "voice-head";
 
     const label = document.createElement("div");
     label.className = "voice-name";
@@ -334,10 +346,64 @@ renderVoiceMeters() {
     db.dataset.voiceDbIndex = String(index);
     db.textContent = "-∞ dB";
 
-    row.appendChild(label);
-    row.appendChild(bar);
-    row.appendChild(db);
+    const note = document.createElement("div");
+    note.className = "voice-note";
+    note.dataset.voiceNoteIndex = String(index);
+    note.textContent = "NOTE --";
 
+    head.append(label, bar, db, note);
+
+    const keyboard = document.createElement("div");
+    keyboard.className = "voice-keyboard";
+    keyboard.setAttribute(
+      "aria-label",
+      `${name || `CH ${index + 1}`} keyboard monitor`
+    );
+
+    // White keys first so the keyboard stays a compact, real HTML piano.
+    for (let midi = keyStart; midi <= keyEnd; midi++) {
+      const noteName = noteNames[midi % 12];
+      if (blackNotes.has(noteName)) continue;
+
+      const octave = Math.floor(midi / 12) - 1;
+      const key = document.createElement("span");
+      key.className = "piano-key white";
+      key.dataset.midi = String(midi);
+      key.dataset.note = `${noteName}${octave}`;
+      keyboard.appendChild(key);
+    }
+
+    // Black keys are positioned over the white-key row.
+    let whiteIndex = 0;
+    const whiteCount = Array.from(
+      { length: keyEnd - keyStart + 1 },
+      (_, i) => keyStart + i
+    ).filter(midi => !blackNotes.has(noteNames[midi % 12])).length;
+
+    for (let midi = keyStart; midi <= keyEnd; midi++) {
+      const noteName = noteNames[midi % 12];
+
+      if (!blackNotes.has(noteName)) {
+        whiteIndex++;
+        continue;
+      }
+
+      const octave = Math.floor(midi / 12) - 1;
+      const key = document.createElement("span");
+      key.className = "piano-key black";
+      key.dataset.midi = String(midi);
+      key.dataset.note = `${noteName}${octave}`;
+      key.style.left = `${((whiteIndex - 0.34) / whiteCount) * 100}%`;
+      keyboard.appendChild(key);
+    }
+
+    const current = document.createElement("div");
+    current.className = "keyboard-current";
+    current.dataset.voiceCurrentIndex = String(index);
+    current.textContent = "CURRENT: --";
+    keyboard.appendChild(current);
+
+    row.append(head, keyboard);
     this.voiceMeterList.appendChild(row);
   });
 
