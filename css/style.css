@@ -137,15 +137,15 @@ main {
 
 
 /* =========================================
-   VISUALIZER PANEL
+   VISUALIZER PANEL / CHANNEL MONITOR
    ========================================= */
 
 #visualizer-panel {
     min-width: 0;
     min-height: 0;
     display: grid;
-    grid-template-rows: minmax(0, 1.05fr) minmax(0, 1fr);
-    gap: 14px;
+    grid-template-rows: minmax(0, 0.2fr) minmax(0, 0.8fr);
+    gap: 10px;
 }
 
 #spectrum-section,
@@ -193,16 +193,8 @@ main {
     height: calc(100% - 28px);
     overflow-y: auto;
     overflow-x: hidden;
-    padding-right: 4px;
+    padding: 0 4px 4px 0;
     font-family: "Courier New", monospace;
-
-    /* CH数が増えたときは横にも展開して、できるだけ多くを一画面に収める */
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    align-content: start;
-    align-items: start;
-    column-gap: 10px;
-    row-gap: 2px;
 }
 
 .voice-empty {
@@ -210,48 +202,116 @@ main {
     color: #777;
     text-align: center;
     font-size: 13px;
-    grid-column: 1 / -1;
 }
 
 .voice-row {
-    display: grid;
-    grid-template-columns: minmax(68px, 0.9fr) minmax(0, 2.4fr) 44px;
-    align-items: center;
-    gap: 6px;
     min-width: 0;
-    min-height: 24px;
-    padding: 1px 0;
+    padding: 7px 4px 8px;
+    margin-bottom: 5px;
+    background: #07070d;
+    border-left: 3px solid #23d7ff;
+    border-bottom: 1px solid #1c2435;
+}
+
+.voice-head {
+    display: grid;
+    grid-template-columns: minmax(86px, 140px) minmax(80px, 1fr) 58px 70px;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 5px;
 }
 
 .voice-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #aaa;
-    font-size: 11px;
+    color: #e8e8e8;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
 }
 
 .voice-bar {
-    min-width: 0;
     height: 12px;
-    padding: 2px;
-    background: #090909;
+    padding: 1px;
+    background: #050505;
     border: 1px solid #303030;
     box-shadow: inset 0 0 5px #000;
+    min-width: 0;
 }
 
 .voice-fill {
     width: 0%;
     height: 100%;
-    background: linear-gradient(90deg, #4bff88 0%, #dfff52 72%, #ff4d4d 100%);
+    background: linear-gradient(90deg, #39ff88 0%, #dfff52 72%, #ff4d4d 100%);
     transition: none;
 }
 
-.voice-db {
+.voice-db,
+.voice-note {
     color: #777;
     font-size: 10px;
     text-align: right;
     white-space: nowrap;
+}
+
+.voice-note {
+    color: #7ee7ff;
+    font-weight: 800;
+}
+
+.voice-keyboard {
+    position: relative;
+    height: 32px;
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+    background: #080808;
+    border: 1px solid #292929;
+    overflow: hidden;
+}
+
+.piano-key.white {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 3px;
+    height: 100%;
+    background: linear-gradient(#f4f4f4 0%, #d5d5d5 72%, #a8a8a8 100%);
+    border-right: 1px solid #555;
+    box-shadow: inset 0 -2px 0 #777;
+}
+
+.piano-key.black {
+    position: absolute;
+    top: 0;
+    width: 1.55%;
+    height: 61%;
+    z-index: 2;
+    background: linear-gradient(#1a1a1a 0%, #080808 70%, #000 100%);
+    border: 1px solid #000;
+    border-radius: 0 0 2px 2px;
+}
+
+.piano-key.active {
+    background: #35e6ff !important;
+    box-shadow: inset 0 0 0 1px #fff, 0 0 6px rgba(53,230,255,.75);
+}
+
+.piano-key.black.active {
+    background: #00bcd4 !important;
+}
+
+.keyboard-current {
+    position: absolute;
+    right: 5px;
+    top: 3px;
+    z-index: 3;
+    padding: 1px 4px;
+    background: rgba(0,0,0,.72);
+    color: #7ee7ff;
+    font-size: 9px;
+    pointer-events: none;
 }
 
 @media (max-width: 1200px) {
@@ -260,16 +320,11 @@ main {
     }
 
     #visualizer-panel {
-        gap: 10px;
+        gap: 8px;
     }
 
-    #voice-meter-list {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        column-gap: 8px;
-    }
-
-    .voice-row {
-        grid-template-columns: minmax(58px, 0.9fr) minmax(0, 2.4fr) 42px;
+    .voice-head {
+        grid-template-columns: minmax(64px, 100px) minmax(70px, 1fr) 52px 62px;
         gap: 5px;
     }
 }
@@ -882,7 +937,23 @@ button {
 
 
     #visualizer-panel {
-        min-height: 520px;
+        min-height: 620px;
+    }
+
+    #visualizer-panel {
+        grid-template-rows: minmax(120px, 0.2fr) minmax(0, 0.8fr);
+    }
+
+    .voice-head {
+        grid-template-columns: minmax(72px, 0.9fr) minmax(0, 2.4fr) 46px;
+    }
+
+    .voice-note {
+        display: none;
+    }
+
+    .voice-keyboard {
+        height: 28px;
     }
 
     #spectrum-section {
@@ -891,16 +962,6 @@ button {
 
     #voice-section {
         min-height: 250px;
-    }
-
-    #voice-meter-list {
-        grid-template-columns: minmax(0, 1fr);
-        row-gap: 2px;
-    }
-
-    .voice-row {
-        grid-template-columns: minmax(72px, 0.9fr) minmax(0, 2.4fr) 44px;
-        min-height: 24px;
     }
 
     #info {
