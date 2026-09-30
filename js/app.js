@@ -356,8 +356,8 @@ renderVoiceMeters() {
     "F#", "G", "G#", "A", "A#", "B"
   ];
   const blackNotes = new Set(["C#", "D#", "F#", "G#", "A#"]);
-  const keyStart = 36; // C2
-  const keyEnd = 83;   // B5
+  const keyStart = 24; // C1
+  const keyEnd = 107;  // B7 (7 octaves)
 
   names.forEach((name, index) => {
     const row = document.createElement("div");
