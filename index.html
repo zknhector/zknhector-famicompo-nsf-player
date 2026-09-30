@@ -109,22 +109,14 @@
 
     <!-- =========================================
          CENTER
-         レトロ・ビジュアライザ
+         音源チャンネル・モニター
          ========================================= -->
 
-    <div id="visualizer-panel">
-
-        <section id="spectrum-section">
-            <div class="visualizer-title">
-                <span>VISUALIZER</span>
-                <span id="visualizer-status">READY</span>
-            </div>
-            <canvas id="spectrum-canvas"></canvas>
-        </section>
+    <div id="channel-panel">
 
         <section id="voice-section">
             <div class="visualizer-title">
-                <span>VOICE LEVEL</span>
+                <span>CHANNEL MONITOR</span>
                 <span id="voice-count">0 CH</span>
             </div>
             <div id="voice-meter-list">
@@ -137,11 +129,18 @@
 
     <!-- =========================================
          RIGHT SIDE
-         曲情報 + Engine Status + Player
+         Visualizer + 曲情報 + Engine Status + Player
          ========================================= -->
 
     <div id="right-panel">
 
+        <section id="spectrum-section">
+            <div class="visualizer-title">
+                <span>VISUALIZER</span>
+                <span id="visualizer-status">READY</span>
+            </div>
+            <canvas id="spectrum-canvas"></canvas>
+        </section>
 
         <section id="info">
 
