@@ -10,8 +10,46 @@ this.songs = [...NSFLibrary.songs];
 
 this.bindUI();
 this.initVisualizer();
+this.initDateTime();
 this.render();
   
+},
+
+initDateTime() {
+  if (this.dateTimeTimer) {
+    clearInterval(this.dateTimeTimer);
+  }
+
+  this.updateDateTime();
+  this.dateTimeTimer = setInterval(() => {
+    this.updateDateTime();
+  }, 1000);
+},
+
+updateDateTime() {
+  const dateElement = document.getElementById("current-date");
+  const timeElement = document.getElementById("current-time");
+
+  if (!dateElement || !timeElement) return;
+
+  const now = new Date();
+
+  const dateText = new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short"
+  }).format(now);
+
+  const timeText = new Intl.DateTimeFormat("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(now);
+
+  dateElement.textContent = dateText;
+  timeElement.textContent = timeText;
 },
 
 bindUI() {
