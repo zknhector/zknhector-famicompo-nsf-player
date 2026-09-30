@@ -50,11 +50,13 @@ header {
     flex:
         0 0 82px;
 
+    position: relative;
+
     background: #222;
 
     padding:
         10px
-        20px;
+        190px;
 
     text-align: center;
 
@@ -66,6 +68,13 @@ header {
     flex-direction: column;
 
     justify-content: center;
+
+    min-width: 0;
+}
+
+
+.header-title {
+    min-width: 0;
 }
 
 
@@ -87,6 +96,39 @@ header p {
     font-size: 16px;
 
     color: #bbb;
+}
+
+
+#datetime-display {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+
+    min-width: 150px;
+    padding: 5px 8px;
+
+    text-align: right;
+    font-family: "Courier New", monospace;
+    line-height: 1.15;
+    white-space: nowrap;
+    user-select: none;
+}
+
+
+#current-date {
+    color: #9aa0a6;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+}
+
+
+#current-time {
+    margin-top: 2px;
+    color: #7ee7ff;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
 }
 
 
@@ -797,6 +839,8 @@ button {
 
     header {
         flex-basis: 76px;
+        padding-left: 150px;
+        padding-right: 170px;
     }
 
 
@@ -807,6 +851,22 @@ button {
 
     header p {
         font-size: 14px;
+    }
+
+
+    #datetime-display {
+        right: 12px;
+        min-width: 132px;
+    }
+
+
+    #current-date {
+        font-size: 10px;
+    }
+
+
+    #current-time {
+        font-size: 17px;
     }
 
 
@@ -880,9 +940,12 @@ button {
             0 0 auto;
 
         padding:
+            12px
+            12px
+            58px
             12px;
 
-        min-height: 78px;
+        min-height: 92px;
     }
 
 
@@ -893,6 +956,31 @@ button {
 
     header p {
         font-size: 13px;
+    }
+
+
+    #datetime-display {
+        top: auto;
+        right: 10px;
+        bottom: 7px;
+        transform: none;
+        min-width: 0;
+        padding: 0;
+    }
+
+
+    #current-date {
+        display: inline;
+        margin-right: 6px;
+        font-size: 9px;
+    }
+
+
+    #current-time {
+        display: inline;
+        margin-top: 0;
+        font-size: 13px;
+        letter-spacing: 0.5px;
     }
 
 
