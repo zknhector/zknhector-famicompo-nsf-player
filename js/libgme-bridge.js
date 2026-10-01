@@ -146,7 +146,7 @@ const LibGME = {
       !count ||
       !this.module ||
       typeof this.module._nsf_bridge_voice_notes !== "function" ||
-      !this.module.HEAP32
+      !this.module.HEAPU8
     ) {
       return [];
     }
@@ -165,11 +165,25 @@ const LibGME = {
 
     if (result !== 1) return [];
 
-    return new Int32Array(
-      this.module.HEAP32.buffer,
+    // HEAP32 is not guaranteed to be exported by every Emscripten build.
+    // HEAPU8 is part of the bridge runtime, so decode the returned int32
+    // values directly from the shared WASM memory.
+    if (!this.module.HEAPU8 || !this.module.HEAPU8.buffer) {
+      return [];
+    }
+
+    const view = new DataView(
+      this.module.HEAPU8.buffer,
       this.notePtr,
-      count
-    ).slice();
+      bytes
+    );
+
+    const notes = new Int32Array(count);
+    for (let i = 0; i < count; i++) {
+      notes[i] = view.getInt32(i * 4, true);
+    }
+
+    return notes;
   },
 
   getVoiceLevels(frameCount) {
