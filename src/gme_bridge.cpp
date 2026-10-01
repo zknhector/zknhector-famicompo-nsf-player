@@ -23,6 +23,7 @@ extern "C" {
  * already-guarded expansion headers and leaves their oscs members private.
  */
 #define private public
+#define protected public
 #include "Nsf_Emu.h"
 #include "Nes_Namco_Apu.h"
 #include "Nes_Vrc6_Apu.h"
@@ -30,6 +31,7 @@ extern "C" {
 #include "Nes_Fds_Apu.h"
 #include "Nes_Mmc5_Apu.h"
 #include "Nes_Vrc7_Apu.h"
+#undef protected
 #undef private
 
 typedef struct {
@@ -61,6 +63,141 @@ static float level_from_amp(int amp, float scale) {
  *   RP2A03 -> VRC6 -> N163 -> FME7 -> FDS -> MMC5 -> VRC7
  * Only the chips actually present in the NSF contribute voices.
  */
+
+static int midi_from_frequency(double hz) {
+    if (!(hz > 0.0) || hz < 8.0 || hz > 16000.0) return -1;
+    double midi = 69.0 + 12.0 * log(hz / 440.0) / log(2.0);
+    int note = (int)floor(midi + 0.5);
+    return (note >= 0 && note <= 127) ? note : -1;
+}
+
+static int read_nsf_internal_notes(Nsf_Emu* nsf, int* notes, int max_notes) {
+    if (!nsf || !notes || max_notes <= 0) return 0;
+
+    int out = 0;
+    Nes_Apu* apu = nsf->apu_();
+    if (!apu) return 0;
+
+    /* NSF's CPU clock is already selected by LibGME for NTSC/PAL. */
+    const double clock = nsf->clock_rate_;
+    if (!(clock > 0.0)) return 0;
+
+    /* RP2A03: square 1, square 2, triangle, noise, DMC. */
+    for (int i = 0; i < Nes_Apu::osc_count && out < max_notes; ++i) {
+        Nes_Osc* osc = apu->oscs[i];
+        int note = -1;
+        if (osc) {
+            const int timer = osc->period();
+            if (i < 2) {
+                /* f = CPU / (16 * (timer + 1)) */
+                if (osc->length_counter > 0 && timer >= 8) {
+                    note = midi_from_frequency(clock / (16.0 * (timer + 1.0)));
+                }
+            } else if (i == 2) {
+                /* Triangle runs at CPU / (32 * (timer + 1)). */
+                Nes_Triangle* tri = static_cast<Nes_Triangle*>(osc);
+                if (osc->length_counter > 0 && tri->linear_counter > 0 && timer >= 2) {
+                    note = midi_from_frequency(clock / (32.0 * (timer + 1.0)));
+                }
+            }
+        }
+        notes[out++] = note;
+    }
+
+    if (nsf->vrc6) {
+        for (int i = 0; i < Nes_Vrc6_Apu::osc_count && out < max_notes; ++i) {
+            const auto& osc = nsf->vrc6->oscs[i];
+            int note = -1;
+            const int timer = osc.period();
+            const int volume = osc.regs[0] & 0x0F;
+            const bool enabled = (osc.regs[2] & 0x80) != 0;
+            if (enabled && volume > 0 && timer > 4) {
+                const double divisor = (i == 2) ? 32.0 : 16.0;
+                note = midi_from_frequency(clock / (divisor * timer));
+            }
+            notes[out++] = note;
+        }
+    }
+
+    if (nsf->namco) {
+        const int active = ((nsf->namco->reg[0x7F] >> 4) & 7) + 1;
+        for (int i = 0; i < Nes_Namco_Apu::osc_count && out < max_notes; ++i) {
+            int note = -1;
+            /* LibGME's active N163 voices occupy the upper oscillator slots. */
+            if (i >= Nes_Namco_Apu::osc_count - active) {
+                const uint8_t* r = &nsf->namco->reg[i * 8 + 0x40];
+                const int volume = r[7] & 0x0F;
+                const bool enabled = (r[4] & 0xE0) != 0;
+                const int freq = (r[4] & 3) * 0x10000 + r[2] * 0x100 + r[0];
+                if (enabled && volume > 0 && freq > 0) {
+                    const double hz = (double)freq * clock / (983040.0 * active);
+                    note = midi_from_frequency(hz);
+                }
+            }
+            notes[out++] = note;
+        }
+    }
+
+    if (nsf->fme7) {
+        for (int i = 0; i < Nes_Fme7_Apu::osc_count && out < max_notes; ++i) {
+            int note = -1;
+            const int mode = nsf->fme7->regs[7] >> i;
+            const int volume_reg = nsf->fme7->regs[10 + i];
+            const unsigned period =
+                (nsf->fme7->regs[i * 2 + 1] & 0x0F) * 0x100 * 16U +
+                nsf->fme7->regs[i * 2] * 16U;
+            if (!(mode & 1) && !(volume_reg & 0x10) && (volume_reg & 0x0F) && period >= 50) {
+                note = midi_from_frequency(clock / (double)period);
+            }
+            notes[out++] = note;
+        }
+    }
+
+    if (nsf->fds && out < max_notes) {
+        int note = -1;
+        const int wave_freq =
+            (nsf->fds->regs(0x4083) & 0x0F) * 0x100 + nsf->fds->regs(0x4082);
+        if (wave_freq && !(nsf->fds->regs(0x4089) & 0x80) && !(nsf->fds->regs(0x4083) & 0x80)) {
+            /* FDS 16-bit phase increment is clock/65536. */
+            note = midi_from_frequency((double)wave_freq * clock / 65536.0);
+        }
+        notes[out++] = note;
+    }
+
+    if (nsf->mmc5) {
+        const int indexes[3] = {0, 1, 4};
+        for (int i = 0; i < 3 && out < max_notes; ++i) {
+            int note = -1;
+            Nes_Osc* osc = nsf->mmc5->oscs[indexes[i]];
+            const int timer = osc ? osc->period() : 0;
+            if (osc && i < 2) {
+                if (osc->length_counter > 0 && timer >= 8) {
+                    note = midi_from_frequency(clock / (16.0 * (timer + 1.0)));
+                }
+            }
+            notes[out++] = note;
+        }
+    }
+
+    if (nsf->vrc7) {
+        for (int i = 0; i < Nes_Vrc7_Apu::osc_count && out < max_notes; ++i) {
+            int note = -1;
+            const auto& osc = nsf->vrc7->oscs[i];
+            const int fnum = osc.regs[0] | ((osc.regs[1] & 0x01) << 8);
+            const int block = (osc.regs[1] >> 1) & 0x07;
+            const int volume = osc.regs[2] & 0x0F;
+            const bool key_on = (osc.regs[1] & 0x10) != 0;
+            if (key_on && fnum > 0 && volume < 15) {
+                const double hz = 49716.0 * fnum * pow(2.0, block - 1) / 512.0;
+                note = midi_from_frequency(hz);
+            }
+            notes[out++] = note;
+        }
+    }
+
+    return out;
+}
+
 static int read_nsf_internal_levels(Nsf_Emu* nsf, float* levels, int max_levels) {
     if (!nsf || !levels || max_levels <= 0) return 0;
 
@@ -350,6 +487,20 @@ const char* nsf_bridge_voice_name(int handle, int index) {
  *
  * In multi-channel mode libgme places each voice in its own stereo pair.
  */
+int nsf_bridge_voice_notes(
+    int handle,
+    int* notes
+) {
+    BridgeHandle* h = get_handle(handle);
+    if (!h || !h->meter_emu || !notes || h->voice_count <= 0) return 0;
+
+    Nsf_Emu* nsf = static_cast<Nsf_Emu*>(h->meter_emu);
+    if (!nsf) return 0;
+
+    for (int i = 0; i < h->voice_count; ++i) notes[i] = -1;
+    return read_nsf_internal_notes(nsf, notes, h->voice_count) == h->voice_count ? 1 : 0;
+}
+
 int nsf_bridge_voice_levels(
     int handle,
     int frame_count,
