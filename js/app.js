@@ -257,6 +257,7 @@ initVisualizer() {
 
   this.voiceTargetLevels = [];
   this.voiceDisplayLevels = [];
+  this.voiceNotes = [];
   this.voiceAnimationTime = performance.now();
 
   this.resizeVisualizer();
@@ -447,7 +448,51 @@ renderVoiceMeters() {
 
   this.voiceTargetLevels = new Array(names.length).fill(0);
   this.voiceDisplayLevels = new Array(names.length).fill(0);
+  this.voiceNotes = new Array(names.length).fill(-1);
   this.clearVoiceLevels();
+  this.renderVoiceNotes();
+},
+
+updateVoiceNotes(notes) {
+  this.voiceNotes = Array.from(notes || []).map(value => {
+    const note = Number(value);
+    return Number.isInteger(note) && note >= 0 && note <= 127 ? note : -1;
+  });
+},
+
+renderVoiceNotes() {
+  if (!this.voiceMeterList) return;
+
+  const rows = this.voiceMeterList.querySelectorAll('.voice-row');
+  rows.forEach(row => {
+    const index = Number(row.dataset.voiceIndex);
+    const midi = this.voiceNotes[index] ?? -1;
+    const noteLabel = midi >= 0 ? this.midiToNoteName(midi) : '--';
+
+    const note = row.querySelector('.voice-note');
+    if (note) note.textContent = `NOTE ${noteLabel}`;
+
+    row.querySelectorAll('.piano-key.active').forEach(key => {
+      key.classList.remove('active');
+    });
+
+    if (midi >= 24 && midi <= 107) {
+      const key = row.querySelector(`.piano-key[data-midi="${midi}"]`);
+      if (key) key.classList.add('active');
+    }
+
+    const current = row.querySelector('.keyboard-current');
+    if (current) current.textContent = `CURRENT: ${noteLabel}`;
+  });
+},
+
+midiToNoteName(midi) {
+  const names = [
+    'C', 'C#', 'D', 'D#', 'E', 'F',
+    'F#', 'G', 'G#', 'A', 'A#', 'B'
+  ];
+  const n = Math.max(0, Math.min(127, Number(midi) || 0));
+  return `${names[n % 12]}${Math.floor(n / 12) - 1}`;
 },
 
 updateVoiceLevels(levels) {
@@ -509,6 +554,8 @@ animateVoiceMeters(now = performance.now()) {
         const decibels = 20 * Math.log10(level);
         db.textContent = `${decibels.toFixed(1)} dB`;
       });
+
+    this.renderVoiceNotes();
   }
 
   requestAnimationFrame(next => this.animateVoiceMeters(next));
@@ -518,6 +565,10 @@ clearVoiceLevels() {
   this.voiceTargetLevels = new Array(
     this.voiceDisplayLevels?.length || 0
   ).fill(0);
+  this.voiceNotes = new Array(
+    this.voiceDisplayLevels?.length || 0
+  ).fill(-1);
+  this.renderVoiceNotes();
 },
 
 
