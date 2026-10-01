@@ -3,15 +3,29 @@ songs: [],
 currentSong: null,
 
 async init() {
-await NSFPlayer.init();
-await NSFLibrary.init();
+  /*
+   * UIイベントは重い/失敗しうる初期化より先に登録する。
+   * AudioWorklet等で問題が起きてもボタン自体は生きたままにする。
+   */
+  this.bindUI();
 
-this.songs = [...NSFLibrary.songs];
+  try {
+    await NSFPlayer.init();
+  } catch (error) {
+    console.error("[APP] NSFPlayer init failed:", error);
+  }
 
-this.bindUI();
-this.initVisualizer();
-this.initDateTime();
-this.render();
+  try {
+    await NSFLibrary.init();
+    this.songs = [...NSFLibrary.songs];
+  } catch (error) {
+    console.error("[APP] Library init failed:", error);
+    this.songs = [];
+  }
+
+  this.initVisualizer();
+  this.initDateTime();
+  this.render();
   
 },
 
