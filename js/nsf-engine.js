@@ -82,66 +82,50 @@ const NSFEngine = {
 
   getFloatPCM(frames) {
     /*
-     * 通常の再生PCM。
-     * ここは既存の安定した再生処理を維持する。
-     */
-    const pcm =
-      GMECore.getSamples(frames * 2);
-
-    /*
-     * 音源CHごとのレベルを取得。
-     */
-    const levels =
-      GMECore.getVoiceLevels(frames);
-
-    const notes =
-      GMECore.getVoiceNotes();
-
-    /*
-     * デバッグ表示。
+     * PCM再生専用。
      *
-     * C/WASM側から実際にどんな値が
-     * JavaScriptへ届いているか確認する。
+     * ここでは音量メーターや鍵盤モニターの取得を行わない。
+     * テレメトリ側でエラーが起きても、音声再生を止めないため。
      */
-    console.log(
-      "[NSF JS] voice levels =",
-      levels
-    );
+    const pcm = GMECore.getSamples(frames * 2);
 
-    if (levels.length) {
-      this.voiceLevels =
-        Array.from(levels);
-    }
+    const out = new Float32Array(pcm.length);
 
-    if (notes.length) {
-      this.voiceNotes =
-        Array.from(notes);
-    }
-
-    /*
-     * 保存された値も確認する。
-     */
-    console.log(
-      "[NSF JS] stored voiceLevels =",
-      this.voiceLevels
-    );
-
-    /*
-     * 通常のPCMをFloat32へ変換。
-     */
-    const out =
-      new Float32Array(pcm.length);
-
-    for (
-      let i = 0;
-      i < pcm.length;
-      i++
-    ) {
-      out[i] =
-        pcm[i] / 32768;
+    for (let i = 0; i < pcm.length; i++) {
+      out[i] = pcm[i] / 32768;
     }
 
     return out;
+  },
+
+  updateVoiceTelemetry(frames) {
+    /*
+     * 音量メーターは再生PCMとは独立して更新する。
+     * 失敗しても音声再生には影響させない。
+     */
+    try {
+      const levels = GMECore.getVoiceLevels(frames);
+
+      if (levels && levels.length) {
+        this.voiceLevels = Array.from(levels);
+      }
+    } catch (error) {
+      console.warn("[NSF JS] voice level update failed:", error);
+    }
+
+    /*
+     * 鍵盤モニターも独立取得。
+     * WASM側に未実装/古いビルドでも再生を止めない。
+     */
+    try {
+      const notes = GMECore.getVoiceNotes();
+
+      if (notes && notes.length) {
+        this.voiceNotes = Array.from(notes);
+      }
+    } catch (error) {
+      console.warn("[NSF JS] voice note update failed:", error);
+    }
   },
 
   getInfo() {
