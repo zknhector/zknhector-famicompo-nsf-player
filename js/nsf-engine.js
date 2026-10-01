@@ -6,6 +6,7 @@ const NSFEngine = {
   info: null,
   voiceNames: [],
   voiceLevels: [],
+  voiceNotes: [],
 
   async init() {
     this.ready = await GMECore.init();
@@ -39,6 +40,10 @@ const NSFEngine = {
     this.voiceLevels = new Array(
       this.voiceNames.length
     ).fill(0);
+
+    this.voiceNotes = new Array(
+      this.voiceNames.length
+    ).fill(-1);
 
     return true;
   },
@@ -89,6 +94,9 @@ const NSFEngine = {
     const levels =
       GMECore.getVoiceLevels(frames);
 
+    const notes =
+      GMECore.getVoiceNotes();
+
     /*
      * デバッグ表示。
      *
@@ -103,6 +111,11 @@ const NSFEngine = {
     if (levels.length) {
       this.voiceLevels =
         Array.from(levels);
+    }
+
+    if (notes.length) {
+      this.voiceNotes =
+        Array.from(notes);
     }
 
     /*
@@ -141,6 +154,10 @@ const NSFEngine = {
 
   getVoiceLevels() {
     return this.voiceLevels;
+  },
+
+  getVoiceNotes() {
+    return this.voiceNotes;
   },
 
   isMultiChannel() {
