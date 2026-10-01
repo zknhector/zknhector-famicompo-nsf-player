@@ -14,6 +14,7 @@ window.GMECore = window.GMECore || {
   getSamples(length) { return GMELoader.getPCM(length); },
   getVoiceNames() { return GMELoader.getVoiceNames(); },
   getVoiceLevels(frames) { return GMELoader.getVoiceLevels(frames); },
+  getVoiceNotes() { return GMELoader.getVoiceNotes(); },
   isMultiChannel() { return GMELoader.isMultiChannel(); },
   startTrack(track) { return GMELoader.start(track) === 1; },
   stop() { GMELoader.stop(); },
