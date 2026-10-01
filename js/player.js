@@ -73,12 +73,18 @@ return false;
 }
 
 
-await this.init();
-await this.audioContext.resume();
-this.createAudio();
+try {
+  await this.init();
+  await this.audioContext.resume();
+  this.createAudio();
 
-if (!NSFEngine.start()) {
-  console.error("NSFEngine.start() failed");
+  if (!NSFEngine.start()) {
+    console.error("NSFEngine.start() failed");
+    return false;
+  }
+} catch (error) {
+  console.error("[PLAYER] play initialization failed:", error);
+  this.playing = false;
   return false;
 }
 
@@ -131,6 +137,19 @@ try {
   );
 
   /*
+   * メーター/鍵盤情報はPCM送信後に独立更新。
+   * ここでエラーが起きても再生PCMは止めない。
+   */
+  try {
+    NSFEngine.updateVoiceTelemetry(2048);
+  } catch (error) {
+    console.warn(
+      "[PLAYER] voice telemetry update skipped:",
+      error
+    );
+  }
+
+  /*
    * APP 接続状態を診断
    */
   console.log(
@@ -162,8 +181,7 @@ try {
     );
 
     if (typeof window.App.updateVoiceNotes === "function") {
-      const voiceNotes = NSFEngine.getVoiceNotes();
-      window.App.updateVoiceNotes(voiceNotes);
+      window.App.updateVoiceNotes(NSFEngine.getVoiceNotes());
     }
 
     console.log(
