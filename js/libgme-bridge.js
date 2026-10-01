@@ -142,7 +142,12 @@ const LibGME = {
 
   getVoiceNotes() {
     const count = this.getVoiceCount();
-    if (!count || !this.module || !this.module._nsf_bridge_voice_notes) {
+    if (
+      !count ||
+      !this.module ||
+      typeof this.module._nsf_bridge_voice_notes !== "function" ||
+      !this.module.HEAP32
+    ) {
       return [];
     }
 
@@ -170,7 +175,13 @@ const LibGME = {
   getVoiceLevels(frameCount) {
     const count = this.getVoiceCount();
 
-    if (!count || !this.module || frameCount <= 0) {
+    if (
+      !count ||
+      !this.module ||
+      typeof this.module._nsf_bridge_voice_levels !== "function" ||
+      frameCount <= 0 ||
+      !this.module.HEAPF32
+    ) {
       return [];
     }
 
