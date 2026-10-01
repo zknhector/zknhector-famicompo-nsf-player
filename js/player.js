@@ -161,6 +161,11 @@ try {
       voiceLevels
     );
 
+    if (typeof window.App.updateVoiceNotes === "function") {
+      const voiceNotes = NSFEngine.getVoiceNotes();
+      window.App.updateVoiceNotes(voiceNotes);
+    }
+
     console.log(
       "[PLAYER] updateVoiceLevels() called successfully"
     );
