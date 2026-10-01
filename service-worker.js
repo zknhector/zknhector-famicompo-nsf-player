@@ -1,4 +1,4 @@
-const CACHE_NAME = "nsf-player-v1.4";
+const CACHE_NAME = "nsf-player-v1.5";
 
 const ASSETS = [
 "./",
