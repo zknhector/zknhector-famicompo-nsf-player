@@ -178,7 +178,6 @@ const LibGME = {
 
     if (!this.levelPtr || this.levelBytes < bytes) {
       if (this.levelPtr) this.module._free(this.levelPtr);
-    if (this.notePtr) this.module._free(this.notePtr);
 
       this.levelPtr = this.module._malloc(bytes);
       this.levelBytes = bytes;
