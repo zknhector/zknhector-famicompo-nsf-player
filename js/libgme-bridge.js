@@ -10,6 +10,8 @@ const LibGME = {
 
   levelPtr: 0,
   levelBytes: 0,
+  notePtr: 0,
+  noteBytes: 0,
 
   sampleRate: 48000,
 
@@ -138,6 +140,33 @@ const LibGME = {
     return names;
   },
 
+  getVoiceNotes() {
+    const count = this.getVoiceCount();
+    if (!count || !this.module || !this.module._nsf_bridge_voice_notes) {
+      return [];
+    }
+
+    const bytes = count * 4;
+    if (!this.notePtr || this.noteBytes < bytes) {
+      if (this.notePtr) this.module._free(this.notePtr);
+      this.notePtr = this.module._malloc(bytes);
+      this.noteBytes = bytes;
+    }
+
+    const result = this.module._nsf_bridge_voice_notes(
+      this.handle,
+      this.notePtr
+    );
+
+    if (result !== 1) return [];
+
+    return new Int32Array(
+      this.module.HEAP32.buffer,
+      this.notePtr,
+      count
+    ).slice();
+  },
+
   getVoiceLevels(frameCount) {
     const count = this.getVoiceCount();
 
@@ -149,6 +178,7 @@ const LibGME = {
 
     if (!this.levelPtr || this.levelBytes < bytes) {
       if (this.levelPtr) this.module._free(this.levelPtr);
+    if (this.notePtr) this.module._free(this.notePtr);
 
       this.levelPtr = this.module._malloc(bytes);
       this.levelBytes = bytes;
@@ -187,6 +217,7 @@ const LibGME = {
     if (this.dataPtr) this.module._free(this.dataPtr);
     if (this.outPtr) this.module._free(this.outPtr);
     if (this.levelPtr) this.module._free(this.levelPtr);
+    if (this.notePtr) this.module._free(this.notePtr);
 
     this.handle = 0;
     this.dataPtr = 0;
@@ -194,6 +225,8 @@ const LibGME = {
     this.outBytes = 0;
     this.levelPtr = 0;
     this.levelBytes = 0;
+    this.notePtr = 0;
+    this.noteBytes = 0;
   }
 };
 
