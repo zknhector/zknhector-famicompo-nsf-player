@@ -1,4 +1,4 @@
-const CACHE_NAME = "nsf-player-v1.10-vrc7-keyboard10";
+const CACHE_NAME = "nsf-player-v1.11-cssfix";
 
 const ASSETS = [
 "./",
