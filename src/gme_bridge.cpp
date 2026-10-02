@@ -188,7 +188,7 @@ static int read_nsf_internal_notes(Nsf_Emu* nsf, int* notes, int max_notes) {
             const int volume = osc.regs[2] & 0x0F;
             const bool key_on = (osc.regs[1] & 0x10) != 0;
             if (key_on && fnum > 0 && volume < 15) {
-                const double hz = 49716.0 * fnum * pow(2.0, block - 1) / 512.0;
+                const double hz = 49716.0 * fnum * pow(2.0, block) / 1048576.0;
                 note = midi_from_frequency(hz);
             }
             notes[out++] = note;
