@@ -371,8 +371,8 @@ renderVoiceMeters() {
     "F#", "G", "G#", "A", "A#", "B"
   ];
   const blackNotes = new Set(["C#", "D#", "F#", "G#", "A#"]);
-  const keyStart = 24; // C1
-  const keyEnd = 119;  // B8 (8 octaves)
+  const keyStart = 12; // C0
+  const keyEnd = 127;  // G9 (MIDI上限)
 
   names.forEach((name, index) => {
     const row = document.createElement("div");
@@ -490,7 +490,7 @@ renderVoiceNotes() {
       key.classList.remove('active');
     });
 
-    if (midi >= 24 && midi <= 119) {
+    if (midi >= 12 && midi <= 127) {
       const key = row.querySelector(`.piano-key[data-midi="${midi}"]`);
       if (key) key.classList.add('active');
     }
