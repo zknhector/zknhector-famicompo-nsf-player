@@ -10,8 +10,12 @@ const LibGME = {
 
   levelPtr: 0,
   levelBytes: 0,
+
   notePtr: 0,
   noteBytes: 0,
+
+  dutyPtr: 0,
+  dutyBytes: 0,
 
   sampleRate: 48000,
 
@@ -39,7 +43,11 @@ const LibGME = {
 
       return this.ready;
     } catch (error) {
-      console.error("Emscripten Module initialization error:", error);
+      console.error(
+        "Emscripten Module initialization error:",
+        error
+      );
+
       this.ready = false;
       return false;
     }
@@ -68,28 +76,46 @@ const LibGME = {
     }
 
     console.log("NSF opened, handle =", this.handle);
+
     return this.handle;
   },
 
   getTrackCount() {
-    if (!this.handle || !this.module) return 0;
-    return this.module._nsf_bridge_track_count(this.handle);
+    if (!this.handle || !this.module) {
+      return 0;
+    }
+
+    return this.module._nsf_bridge_track_count(
+      this.handle
+    );
   },
 
   startTrack(track) {
-    if (!this.handle || !this.module) return 0;
-    return this.module._nsf_bridge_start(this.handle, track);
+    if (!this.handle || !this.module) {
+      return 0;
+    }
+
+    return this.module._nsf_bridge_start(
+      this.handle,
+      track
+    );
   },
 
   play(sampleCount) {
-    if (!this.handle || !this.module || sampleCount <= 0) {
+    if (
+      !this.handle ||
+      !this.module ||
+      sampleCount <= 0
+    ) {
       return new Int16Array(0);
     }
 
     const bytes = sampleCount * 2;
 
     if (!this.outPtr || this.outBytes < bytes) {
-      if (this.outPtr) this.module._free(this.outPtr);
+      if (this.outPtr) {
+        this.module._free(this.outPtr);
+      }
 
       this.outPtr = this.module._malloc(bytes);
       this.outBytes = bytes;
@@ -102,7 +128,9 @@ const LibGME = {
     );
 
     if (result !== 1) {
-      throw new Error(`libgme play failed (${result})`);
+      throw new Error(
+        `libgme play failed (${result})`
+      );
     }
 
     return new Int16Array(
@@ -113,23 +141,46 @@ const LibGME = {
   },
 
   getVoiceCount() {
-    if (!this.handle || !this.module) return 0;
-    return this.module._nsf_bridge_voice_count(this.handle);
+    if (!this.handle || !this.module) {
+      return 0;
+    }
+
+    return this.module._nsf_bridge_voice_count(
+      this.handle
+    );
   },
 
   isMultiChannel() {
-    if (!this.handle || !this.module || !this.module._nsf_bridge_multi_channel) return false;
-    return this.module._nsf_bridge_multi_channel(this.handle) === 1;
+    if (
+      !this.handle ||
+      !this.module ||
+      !this.module._nsf_bridge_multi_channel
+    ) {
+      return false;
+    }
+
+    return (
+      this.module._nsf_bridge_multi_channel(
+        this.handle
+      ) === 1
+    );
   },
 
   getVoiceNames() {
     const count = this.getVoiceCount();
     const names = [];
 
-    if (!count || !this.module) return names;
+    if (!count || !this.module) {
+      return names;
+    }
 
     for (let i = 0; i < count; i++) {
-      const ptr = this.module._nsf_bridge_voice_name(this.handle, i);
+      const ptr =
+        this.module._nsf_bridge_voice_name(
+          this.handle,
+          i
+        );
+
       names.push(
         ptr
           ? this.module.UTF8ToString(ptr)
@@ -142,33 +193,49 @@ const LibGME = {
 
   getVoiceNotes() {
     const count = this.getVoiceCount();
+
     if (
       !count ||
       !this.module ||
-      typeof this.module._nsf_bridge_voice_notes !== "function" ||
+      typeof this.module._nsf_bridge_voice_notes !==
+        "function" ||
       !this.module.HEAPU8
     ) {
       return [];
     }
 
     const bytes = count * 4;
+
     if (!this.notePtr || this.noteBytes < bytes) {
-      if (this.notePtr) this.module._free(this.notePtr);
+      if (this.notePtr) {
+        this.module._free(this.notePtr);
+      }
+
       this.notePtr = this.module._malloc(bytes);
       this.noteBytes = bytes;
     }
 
-    const result = this.module._nsf_bridge_voice_notes(
-      this.handle,
-      this.notePtr
-    );
+    const result =
+      this.module._nsf_bridge_voice_notes(
+        this.handle,
+        this.notePtr
+      );
 
-    if (result !== 1) return [];
+    if (result !== 1) {
+      return [];
+    }
 
-    // HEAP32 is not guaranteed to be exported by every Emscripten build.
-    // HEAPU8 is part of the bridge runtime, so decode the returned int32
-    // values directly from the shared WASM memory.
-    if (!this.module.HEAPU8 || !this.module.HEAPU8.buffer) {
+    /*
+     * HEAP32 is not guaranteed to be exported by
+     * every Emscripten build.
+     *
+     * HEAPU8 is part of the bridge runtime, so decode
+     * the returned int32 values directly from WASM memory.
+     */
+    if (
+      !this.module.HEAPU8 ||
+      !this.module.HEAPU8.buffer
+    ) {
       return [];
     }
 
@@ -179,8 +246,12 @@ const LibGME = {
     );
 
     const notes = new Int32Array(count);
+
     for (let i = 0; i < count; i++) {
-      notes[i] = view.getInt32(i * 4, true);
+      notes[i] = view.getInt32(
+        i * 4,
+        true
+      );
     }
 
     return notes;
@@ -192,7 +263,8 @@ const LibGME = {
     if (
       !count ||
       !this.module ||
-      typeof this.module._nsf_bridge_voice_levels !== "function" ||
+      typeof this.module._nsf_bridge_voice_levels !==
+        "function" ||
       frameCount <= 0 ||
       !this.module.HEAPF32
     ) {
@@ -202,17 +274,20 @@ const LibGME = {
     const bytes = count * 4;
 
     if (!this.levelPtr || this.levelBytes < bytes) {
-      if (this.levelPtr) this.module._free(this.levelPtr);
+      if (this.levelPtr) {
+        this.module._free(this.levelPtr);
+      }
 
       this.levelPtr = this.module._malloc(bytes);
       this.levelBytes = bytes;
     }
 
-    const result = this.module._nsf_bridge_voice_levels(
-      this.handle,
-      frameCount,
-      this.levelPtr
-    );
+    const result =
+      this.module._nsf_bridge_voice_levels(
+        this.handle,
+        frameCount,
+        this.levelPtr
+      );
 
     if (result !== 1) {
       return [];
@@ -225,32 +300,120 @@ const LibGME = {
     ).slice();
   },
 
+  /*
+   * Get the current duty ratio for every voice.
+   *
+   * Values:
+   *   0.125 = 12.5%
+   *   0.250 = 25%
+   *   0.375 = 37.5%
+   *   0.500 = 50%
+   *   0.625 = 62.5%
+   *   0.750 = 75%
+   *   0.875 = 87.5%
+   *   1.000 = 100%
+   *
+   * -1.0 means that the voice does not have
+   * a conventional pulse duty ratio.
+   *
+   * The array order is identical to voice names,
+   * levels and notes.
+   */
+  getVoiceDuties() {
+    const count = this.getVoiceCount();
+
+    if (
+      !count ||
+      !this.module ||
+      typeof this.module._nsf_bridge_voice_duty !==
+        "function" ||
+      !this.module.HEAPF32
+    ) {
+      return [];
+    }
+
+    const bytes = count * 4;
+
+    if (!this.dutyPtr || this.dutyBytes < bytes) {
+      if (this.dutyPtr) {
+        this.module._free(this.dutyPtr);
+      }
+
+      this.dutyPtr = this.module._malloc(bytes);
+      this.dutyBytes = bytes;
+    }
+
+    const result =
+      this.module._nsf_bridge_voice_duty(
+        this.handle,
+        this.dutyPtr
+      );
+
+    if (result !== 1) {
+      return [];
+    }
+
+    return new Float32Array(
+      this.module.HEAPF32.buffer,
+      this.dutyPtr,
+      count
+    ).slice();
+  },
+
   stop() {
     if (this.handle && this.module) {
-      this.module._nsf_bridge_stop(this.handle);
+      this.module._nsf_bridge_stop(
+        this.handle
+      );
     }
   },
 
   close() {
-    if (!this.module) return;
-
-    if (this.handle) {
-      this.module._nsf_bridge_delete(this.handle);
+    if (!this.module) {
+      return;
     }
 
-    if (this.dataPtr) this.module._free(this.dataPtr);
-    if (this.outPtr) this.module._free(this.outPtr);
-    if (this.levelPtr) this.module._free(this.levelPtr);
-    if (this.notePtr) this.module._free(this.notePtr);
+    if (this.handle) {
+      this.module._nsf_bridge_delete(
+        this.handle
+      );
+    }
+
+    if (this.dataPtr) {
+      this.module._free(this.dataPtr);
+    }
+
+    if (this.outPtr) {
+      this.module._free(this.outPtr);
+    }
+
+    if (this.levelPtr) {
+      this.module._free(this.levelPtr);
+    }
+
+    if (this.notePtr) {
+      this.module._free(this.notePtr);
+    }
+
+    if (this.dutyPtr) {
+      this.module._free(this.dutyPtr);
+    }
 
     this.handle = 0;
+
     this.dataPtr = 0;
+
     this.outPtr = 0;
     this.outBytes = 0;
+
     this.levelPtr = 0;
     this.levelBytes = 0;
+
     this.notePtr = 0;
     this.noteBytes = 0;
+
+    this.dutyPtr = 0;
+    this.dutyBytes = 0;
   }
 };
 
