@@ -3,67 +3,15 @@ songs: [],
 currentSong: null,
 
 async init() {
-  /*
-   * UIイベントは重い/失敗しうる初期化より先に登録する。
-   * AudioWorklet等で問題が起きてもボタン自体は生きたままにする。
-   */
-  this.bindUI();
+await NSFPlayer.init();
+await NSFLibrary.init();
 
-  try {
-    await NSFPlayer.init();
-  } catch (error) {
-    console.error("[APP] NSFPlayer init failed:", error);
-  }
+this.songs = [...NSFLibrary.songs];
 
-  try {
-    await NSFLibrary.init();
-    this.songs = [...NSFLibrary.songs];
-  } catch (error) {
-    console.error("[APP] Library init failed:", error);
-    this.songs = [];
-  }
-
-  this.initVisualizer();
-  this.initDateTime();
-  this.render();
+this.bindUI();
+this.initVisualizer();
+this.render();
   
-},
-
-initDateTime() {
-  if (this.dateTimeTimer) {
-    clearInterval(this.dateTimeTimer);
-  }
-
-  this.updateDateTime();
-  this.dateTimeTimer = setInterval(() => {
-    this.updateDateTime();
-  }, 1000);
-},
-
-updateDateTime() {
-  const dateElement = document.getElementById("current-date");
-  const timeElement = document.getElementById("current-time");
-
-  if (!dateElement || !timeElement) return;
-
-  const now = new Date();
-
-  const dateText = new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short"
-  }).format(now);
-
-  const timeText = new Intl.DateTimeFormat("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false
-  }).format(now);
-
-  dateElement.textContent = dateText;
-  timeElement.textContent = timeText;
 },
 
 bindUI() {
@@ -271,7 +219,7 @@ initVisualizer() {
 
   this.voiceTargetLevels = [];
   this.voiceDisplayLevels = [];
-  this.voiceNotes = [];
+  this.voiceDuties = [];
   this.voiceAnimationTime = performance.now();
 
   this.resizeVisualizer();
@@ -279,6 +227,13 @@ initVisualizer() {
 
   this.drawVisualizer();
   this.animateVoiceMeters();
+
+  /*
+   * Duty telemetry is read independently from the PCM playback path.
+   * The native meter emulator is advanced by player.js, while this
+   * timer only reads the latest duty values for the UI.
+   */
+  this.startDutyTelemetry();
 },
 
 resizeVisualizer() {
@@ -359,6 +314,8 @@ renderVoiceMeters() {
       this.voiceCountElement.textContent = "0 CH";
     }
 
+    this.voiceDuties = [];
+
     return;
   }
 
@@ -366,21 +323,16 @@ renderVoiceMeters() {
     this.voiceCountElement.textContent = `${names.length} CH`;
   }
 
-  const noteNames = [
-    "C", "C#", "D", "D#", "E", "F",
-    "F#", "G", "G#", "A", "A#", "B"
-  ];
-  const blackNotes = new Set(["C#", "D#", "F#", "G#", "A#"]);
-  const keyStart = 12; // C0
-  const keyEnd = 127;  // G9 (MIDI上限)
+  const duties =
+    typeof NSFEngine.getVoiceDuties === "function"
+      ? NSFEngine.getVoiceDuties()
+      : [];
+
+  this.voiceDuties = Array.from(duties || []);
 
   names.forEach((name, index) => {
     const row = document.createElement("div");
     row.className = "voice-row";
-    row.dataset.voiceIndex = String(index);
-
-    const head = document.createElement("div");
-    head.className = "voice-head";
 
     const label = document.createElement("div");
     label.className = "voice-name";
@@ -399,114 +351,91 @@ renderVoiceMeters() {
     db.dataset.voiceDbIndex = String(index);
     db.textContent = "-∞ dB";
 
-    const note = document.createElement("div");
-    note.className = "voice-note";
-    note.dataset.voiceNoteIndex = String(index);
-    note.textContent = "NOTE --";
-
-    head.append(label, bar, db, note);
-
-    const keyboard = document.createElement("div");
-    keyboard.className = "voice-keyboard";
-    keyboard.setAttribute(
-      "aria-label",
-      `${name || `CH ${index + 1}`} keyboard monitor`
+    const duty = document.createElement("div");
+    duty.className = "voice-duty";
+    duty.dataset.voiceDutyIndex = String(index);
+    duty.textContent = this.formatDuty(
+      this.voiceDuties[index]
     );
 
-    // White keys first so the keyboard stays a compact, real HTML piano.
-    for (let midi = keyStart; midi <= keyEnd; midi++) {
-      const noteName = noteNames[midi % 12];
-      if (blackNotes.has(noteName)) continue;
+    row.appendChild(label);
+    row.appendChild(bar);
+    row.appendChild(db);
+    row.appendChild(duty);
 
-      const octave = Math.floor(midi / 12) - 1;
-      const key = document.createElement("span");
-      key.className = "piano-key white";
-      key.dataset.midi = String(midi);
-      key.dataset.note = `${noteName}${octave}`;
-      keyboard.appendChild(key);
-    }
-
-    // Black keys are positioned over the white-key row.
-    let whiteIndex = 0;
-    const whiteCount = Array.from(
-      { length: keyEnd - keyStart + 1 },
-      (_, i) => keyStart + i
-    ).filter(midi => !blackNotes.has(noteNames[midi % 12])).length;
-
-    for (let midi = keyStart; midi <= keyEnd; midi++) {
-      const noteName = noteNames[midi % 12];
-
-      if (!blackNotes.has(noteName)) {
-        whiteIndex++;
-        continue;
-      }
-
-      const octave = Math.floor(midi / 12) - 1;
-      const key = document.createElement("span");
-      key.className = "piano-key black";
-      key.dataset.midi = String(midi);
-      key.dataset.note = `${noteName}${octave}`;
-      key.style.left = `${((whiteIndex - 0.34) / whiteCount) * 100}%`;
-      keyboard.appendChild(key);
-    }
-
-    const current = document.createElement("div");
-    current.className = "keyboard-current";
-    current.dataset.voiceCurrentIndex = String(index);
-    current.textContent = "CURRENT: --";
-    keyboard.appendChild(current);
-
-    row.append(head, keyboard);
     this.voiceMeterList.appendChild(row);
   });
 
   this.voiceTargetLevels = new Array(names.length).fill(0);
   this.voiceDisplayLevels = new Array(names.length).fill(0);
-  this.voiceNotes = new Array(names.length).fill(-1);
+
   this.clearVoiceLevels();
-  this.renderVoiceNotes();
+  this.updateVoiceDuties(this.voiceDuties);
 },
 
-updateVoiceNotes(notes) {
-  this.voiceNotes = Array.from(notes || []).map(value => {
-    const note = Number(value);
-    return Number.isInteger(note) && note >= 0 && note <= 127 ? note : -1;
-  });
+formatDuty(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number) || number < 0) {
+    return "—";
+  }
+
+  const percent = number * 100;
+
+  if (Math.abs(percent - Math.round(percent)) < 0.01) {
+    return `${Math.round(percent)}%`;
+  }
+
+  return `${percent.toFixed(1)}%`;
 },
 
-renderVoiceNotes() {
-  if (!this.voiceMeterList) return;
+updateVoiceDuties(duties) {
+  const values = Array.from(duties || []);
 
-  const rows = this.voiceMeterList.querySelectorAll('.voice-row');
-  rows.forEach(row => {
-    const index = Number(row.dataset.voiceIndex);
-    const midi = this.voiceNotes[index] ?? -1;
-    const noteLabel = midi >= 0 ? this.midiToNoteName(midi) : '--';
+  this.voiceDuties = values;
 
-    const note = row.querySelector('.voice-note');
-    if (note) note.textContent = `NOTE ${noteLabel}`;
+  if (!this.voiceMeterList) {
+    return;
+  }
 
-    row.querySelectorAll('.piano-key.active').forEach(key => {
-      key.classList.remove('active');
+  this.voiceMeterList
+    .querySelectorAll(".voice-duty")
+    .forEach(duty => {
+      const index =
+        Number(duty.dataset.voiceDutyIndex);
+
+      duty.textContent =
+        this.formatDuty(values[index]);
     });
+},
 
-    if (midi >= 12 && midi <= 127) {
-      const key = row.querySelector(`.piano-key[data-midi="${midi}"]`);
-      if (key) key.classList.add('active');
+startDutyTelemetry() {
+  const poll = () => {
+    try {
+      if (
+        window.NSFEngine &&
+        typeof NSFEngine.getVoiceDuties === "function"
+      ) {
+        const duties =
+          NSFEngine.getVoiceDuties();
+
+        this.updateVoiceDuties(duties);
+      }
+    } catch (error) {
+      /*
+       * Duty telemetry is UI-only.
+       * Never allow a telemetry error to affect playback.
+       */
+      console.warn(
+        "[APP] duty telemetry update failed:",
+        error
+      );
     }
 
-    const current = row.querySelector('.keyboard-current');
-    if (current) current.textContent = `CURRENT: ${noteLabel}`;
-  });
-},
+    window.setTimeout(poll, 100);
+  };
 
-midiToNoteName(midi) {
-  const names = [
-    'C', 'C#', 'D', 'D#', 'E', 'F',
-    'F#', 'G', 'G#', 'A', 'A#', 'B'
-  ];
-  const n = Math.max(0, Math.min(127, Number(midi) || 0));
-  return `${names[n % 12]}${Math.floor(n / 12) - 1}`;
+  window.setTimeout(poll, 100);
 },
 
 updateVoiceLevels(levels) {
@@ -568,8 +497,6 @@ animateVoiceMeters(now = performance.now()) {
         const decibels = 20 * Math.log10(level);
         db.textContent = `${decibels.toFixed(1)} dB`;
       });
-
-    this.renderVoiceNotes();
   }
 
   requestAnimationFrame(next => this.animateVoiceMeters(next));
@@ -579,10 +506,6 @@ clearVoiceLevels() {
   this.voiceTargetLevels = new Array(
     this.voiceDisplayLevels?.length || 0
   ).fill(0);
-  this.voiceNotes = new Array(
-    this.voiceDisplayLevels?.length || 0
-  ).fill(-1);
-  this.renderVoiceNotes();
 },
 
 
@@ -625,8 +548,6 @@ this.renderVoiceMeters();
 
 }
 };
-
-window.App = App;
 
 window.addEventListener(
 "load",
