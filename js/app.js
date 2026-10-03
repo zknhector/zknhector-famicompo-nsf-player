@@ -1,555 +1,646 @@
-const App = {
-songs: [],
-currentSong: null,
+const NSFEngine = {
+  initialized: false,
+  loaded: false,
 
-async init() {
-await NSFPlayer.init();
-await NSFLibrary.init();
+  currentTrack: 0,
+  trackCount: 0,
 
-this.songs = [...NSFLibrary.songs];
+  voiceNames: [],
+  voiceNotes: [],
+  voiceLevels: [],
+  voiceDuties: [],
 
-this.bindUI();
-this.initVisualizer();
-this.render();
-  
-},
+  info: null,
 
-bindUI() {
-const input =
-document.getElementById("file-input");
+  sampleRate: 48000,
 
-input.addEventListener("change", e => {
-  this.loadFiles(e.target.files);
-});
+  async init() {
+    if (this.initialized) {
+      return true;
+    }
 
-document.getElementById("play").onclick = () => {
-  NSFPlayer.play();
-};
-
-document.getElementById("stop").onclick = () => {
-  NSFPlayer.stop();
-};
-
-document.getElementById("prev").onclick = () => {
-  this.changeTrack(-1);
-};
-
-document.getElementById("next").onclick = () => {
-  this.changeTrack(1);
-};
-
-
-
-},
-
-async changeTrack(direction) {
-if (!this.currentSong) {
-console.log("No song selected");
-return;
-}
-
-const count = NSFEngine.trackCount;
-
-if (!count || count <= 1) {
-  console.log(
-    "This NSF has only one track"
-  );
-  return;
-}
-
-let track =
-  NSFEngine.currentTrack + direction;
-
-if (track < 0) {
-  track = count - 1;
-}
-
-if (track >= count) {
-  track = 0;
-}
-
-const wasPlaying = NSFPlayer.playing;
-
-NSFPlayer.stop();
-
-if (!NSFEngine.setTrack(track)) {
-  console.error(
-    "Track change failed:",
-    track
-  );
-  return;
-}
-
-console.log(
-  `Track changed: ${track + 1} / ${count}`
-);
-
-this.updateInfo();
-
-if (wasPlaying) {
-  await NSFPlayer.play();
-}
-
-},
-
-async loadFiles(files) {
-let added = 0;
-let duplicates = 0;
-
-for (const file of files) {
-  if (!/\.(nsf|nsfe)$/i.test(file.name)) {
-    continue;
-  }
-
-  const song = await NSFLibrary.add({
-    filename: file.name,
-    file
-  });
-
-  if (song) {
-    this.songs.push(song);
-    added++;
-  } else {
-    duplicates++;
-  }
-}
-
-this.render();
-
-if (duplicates > 0) {
-  console.log(
-    `重複ファイル ${duplicates} 件をスキップしました`
-  );
-}
-
-console.log(
-  `Library: ${added} added, ${duplicates} duplicate(s) skipped`
-);
-
-},
-
-async removeSong(song) {
-if (!song || !song.id) {
-return;
-}
-
-if (this.currentSong?.id === song.id) {
-  NSFPlayer.stop();
-  NSFPlayer.currentSong = null;
-  this.currentSong = null;
-}
-
-await NSFLibrary.remove(song.id);
-
-this.songs = [...NSFLibrary.songs];
-
-this.render();
-
-},
-
-render() {
-const list =
-document.getElementById("song-list");
-
-list.textContent = "";
-
-if (!this.songs.length) {
-  const li = document.createElement("li");
-
-  li.textContent =
-    "まだ曲がありません";
-
-  list.appendChild(li);
-
-  return;
-}
-
-for (const song of this.songs) {
-  const li = document.createElement("li");
-
-  const name =
-    document.createElement("span");
-
-  name.textContent = song.filename;
-
-  const remove =
-    document.createElement("button");
-
-  remove.textContent = "🗑";
-  remove.title = "この曲をライブラリから削除";
-
-  remove.onclick = async event => {
-    event.stopPropagation();
-
-    await this.removeSong(song);
-  };
-
-  li.appendChild(name);
-  li.appendChild(remove);
-
-  li.onclick = async () => {
-    this.currentSong = song;
-
-    try {
-      await NSFPlayer.load(song);
-      this.updateInfo();
-    } catch (error) {
-      console.error(error);
-
-      alert(
-        "このファイルを読み込めませんでした。"
+    if (!window.LibGME) {
+      console.error(
+        "[NSF] LibGME bridge is not available."
       );
-    }
-  };
 
-  list.appendChild(li);
-}
-
-},
-
-initVisualizer() {
-  this.spectrumCanvas = document.getElementById("spectrum-canvas");
-  this.spectrumContext = this.spectrumCanvas
-    ? this.spectrumCanvas.getContext("2d")
-    : null;
-
-  this.visualizerStatus = document.getElementById("visualizer-status");
-  this.voiceCountElement = document.getElementById("voice-count");
-  this.voiceMeterList = document.getElementById("voice-meter-list");
-
-  this.voiceTargetLevels = [];
-  this.voiceDisplayLevels = [];
-  this.voiceDuties = [];
-  this.voiceAnimationTime = performance.now();
-
-  this.resizeVisualizer();
-  window.addEventListener("resize", () => this.resizeVisualizer());
-
-  this.drawVisualizer();
-  this.animateVoiceMeters();
-
-  /*
-   * Duty telemetry is read independently from the PCM playback path.
-   * The native meter emulator is advanced by player.js, while this
-   * timer only reads the latest duty values for the UI.
-   */
-  this.startDutyTelemetry();
-},
-
-resizeVisualizer() {
-  if (!this.spectrumCanvas || !this.spectrumContext) return;
-
-  const rect = this.spectrumCanvas.getBoundingClientRect();
-  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-
-  this.spectrumCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
-  this.spectrumCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
-  this.spectrumContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-},
-
-drawVisualizer() {
-  if (!this.spectrumCanvas || !this.spectrumContext) return;
-
-  const ctx = this.spectrumContext;
-  const width = this.spectrumCanvas.clientWidth;
-  const height = this.spectrumCanvas.clientHeight;
-
-  ctx.clearRect(0, 0, width, height);
-
-  const data = NSFPlayer.getSpectrumData();
-  const bars = data ? Math.min(48, data.length) : 48;
-  const step = data ? data.length / bars : 1;
-  const gap = 3;
-  const barWidth = Math.max(2, (width - gap * (bars - 1)) / bars);
-
-  for (let i = 0; i < bars; i++) {
-    let value = 0;
-
-    if (data) {
-      const start = Math.floor(i * step);
-      const end = Math.max(start + 1, Math.floor((i + 1) * step));
-
-      for (let j = start; j < end && j < data.length; j++) {
-        value = Math.max(value, data[j] / 255);
-      }
+      return false;
     }
 
-    const shaped = Math.pow(value, 0.72);
-    const barHeight = Math.max(2, shaped * (height - 12));
-    const x = i * (barWidth + gap);
-    const y = height - barHeight;
+    const ready =
+      await window.LibGME.init();
 
-    const gradient = ctx.createLinearGradient(0, y, 0, height);
-    gradient.addColorStop(0, "#ff3b3b");
-    gradient.addColorStop(0.45, "#ffd83d");
-    gradient.addColorStop(1, "#35ff8a");
+    if (!ready) {
+      console.error(
+        "[NSF] LibGME initialization failed."
+      );
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(x, y, barWidth, barHeight);
-
-    ctx.fillStyle = "rgba(255,255,255,0.14)";
-    ctx.fillRect(x, y, barWidth, 2);
-  }
-
-  if (this.visualizerStatus) {
-    this.visualizerStatus.textContent = NSFPlayer.playing ? "PLAY" : "READY";
-  }
-
-  requestAnimationFrame(() => this.drawVisualizer());
-},
-
-renderVoiceMeters() {
-  if (!this.voiceMeterList) return;
-
-  const names = NSFEngine.getVoiceNames();
-  this.voiceMeterList.textContent = "";
-
-  if (!names.length) {
-    const empty = document.createElement("p");
-    empty.className = "voice-empty";
-    empty.textContent = "この曲の音源CH情報を取得できません";
-    this.voiceMeterList.appendChild(empty);
-
-    if (this.voiceCountElement) {
-      this.voiceCountElement.textContent = "0 CH";
+      return false;
     }
 
-    this.voiceDuties = [];
+    this.initialized = true;
 
-    return;
-  }
-
-  if (this.voiceCountElement) {
-    this.voiceCountElement.textContent = `${names.length} CH`;
-  }
-
-  const duties =
-    typeof NSFEngine.getVoiceDuties === "function"
-      ? NSFEngine.getVoiceDuties()
-      : [];
-
-  this.voiceDuties = Array.from(duties || []);
-
-  names.forEach((name, index) => {
-    const row = document.createElement("div");
-    row.className = "voice-row";
-
-    const label = document.createElement("div");
-    label.className = "voice-name";
-    label.textContent = name || `CH ${index + 1}`;
-
-    const bar = document.createElement("div");
-    bar.className = "voice-bar";
-
-    const fill = document.createElement("div");
-    fill.className = "voice-fill";
-    fill.dataset.voiceIndex = String(index);
-    bar.appendChild(fill);
-
-    const db = document.createElement("div");
-    db.className = "voice-db";
-    db.dataset.voiceDbIndex = String(index);
-    db.textContent = "-∞ dB";
-
-    const duty = document.createElement("div");
-    duty.className = "voice-duty";
-    duty.dataset.voiceDutyIndex = String(index);
-    duty.textContent = this.formatDuty(
-      this.voiceDuties[index]
+    console.log(
+      "[NSF] Engine initialized."
     );
 
-    row.appendChild(label);
-    row.appendChild(bar);
-    row.appendChild(db);
-    row.appendChild(duty);
+    return true;
+  },
 
-    this.voiceMeterList.appendChild(row);
-  });
+  async load(buffer) {
+    if (!this.initialized) {
+      const ok = await this.init();
 
-  this.voiceTargetLevels = new Array(names.length).fill(0);
-  this.voiceDisplayLevels = new Array(names.length).fill(0);
+      if (!ok) {
+        throw new Error(
+          "NSF engine initialization failed"
+        );
+      }
+    }
 
-  this.clearVoiceLevels();
-  this.updateVoiceDuties(this.voiceDuties);
-},
+    if (!buffer) {
+      throw new Error(
+        "NSF buffer is empty"
+      );
+    }
 
-formatDuty(value) {
-  const number = Number(value);
+    /*
+     * Parse the file header separately from the
+     * actual libgme playback engine.
+     *
+     * This keeps the existing UI metadata path
+     * independent from PCM generation.
+     */
+    let parsedInfo = null;
 
-  if (!Number.isFinite(number) || number < 0) {
-    return "—";
-  }
+    if (
+      window.NSFParser &&
+      typeof window.NSFParser.parse === "function"
+    ) {
+      try {
+        parsedInfo =
+          window.NSFParser.parse(buffer);
+      } catch (error) {
+        console.warn(
+          "[NSF] metadata parsing failed:",
+          error
+        );
+      }
+    }
 
-  const percent = number * 100;
+    /*
+     * Close any previous NSF before opening the new one.
+     */
+    this.unload();
 
-  if (Math.abs(percent - Math.round(percent)) < 0.01) {
-    return `${Math.round(percent)}%`;
-  }
+    window.LibGME.open(buffer);
 
-  return `${percent.toFixed(1)}%`;
-},
+    this.trackCount =
+      window.LibGME.getTrackCount();
 
-updateVoiceDuties(duties) {
-  const values = Array.from(duties || []);
+    this.currentTrack =
+      parsedInfo &&
+      Number.isFinite(parsedInfo.startTrackIndex)
+        ? parsedInfo.startTrackIndex
+        : 0;
 
-  this.voiceDuties = values;
+    if (
+      this.currentTrack < 0 ||
+      this.currentTrack >= this.trackCount
+    ) {
+      this.currentTrack = 0;
+    }
 
-  if (!this.voiceMeterList) {
-    return;
-  }
+    this.info = parsedInfo || {
+      format: "NSF",
+      version: null,
+      trackCount: this.trackCount,
+      startTrackIndex: this.currentTrack,
+      title: "",
+      artist: "",
+      copyright: "",
+      trackTitles: [],
+      trackArtists: [],
+      chip: "2A03"
+    };
 
-  this.voiceMeterList
-    .querySelectorAll(".voice-duty")
-    .forEach(duty => {
-      const index =
-        Number(duty.dataset.voiceDutyIndex);
+    /*
+     * libgme is the authority for the actual
+     * number and names of playable voices.
+     */
+    this.refreshVoiceInfo();
 
-      duty.textContent =
-        this.formatDuty(values[index]);
-    });
-},
+    this.loaded = true;
 
-startDutyTelemetry() {
-  const poll = () => {
+    console.log(
+      "[NSF] Loaded:",
+      {
+        tracks: this.trackCount,
+        voices: this.voiceNames.length
+      }
+    );
+
+    return {
+      trackCount: this.trackCount,
+      voiceNames: this.voiceNames.slice()
+    };
+  },
+
+  refreshVoiceInfo() {
+    if (
+      !window.LibGME ||
+      !window.LibGME.handle
+    ) {
+      return;
+    }
+
+    this.voiceNames =
+      window.LibGME.getVoiceNames() || [];
+
+    this.voiceNotes =
+      new Array(this.voiceNames.length)
+        .fill(-1);
+
+    this.voiceLevels =
+      new Array(this.voiceNames.length)
+        .fill(0);
+
+    this.voiceDuties =
+      new Array(this.voiceNames.length)
+        .fill(-1);
+  },
+
+  /*
+   * Start the currently selected track.
+   *
+   * player.js expects NSFEngine.start().
+   */
+  start() {
+    if (
+      !this.loaded ||
+      !window.LibGME ||
+      !window.LibGME.handle
+    ) {
+      console.warn(
+        "[NSF] start() called before NSF was loaded."
+      );
+
+      return false;
+    }
+
+    return this.startTrack(
+      this.currentTrack
+    );
+  },
+
+  /*
+   * Start a specific track.
+   */
+  startTrack(track) {
+    if (
+      !window.LibGME ||
+      !window.LibGME.handle
+    ) {
+      return false;
+    }
+
+    const index = Number(track);
+
+    if (
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= this.trackCount
+    ) {
+      console.error(
+        "[NSF] Invalid track:",
+        track
+      );
+
+      return false;
+    }
+
+    const result =
+      window.LibGME.startTrack(index);
+
+    /*
+     * The native bridge returns 1 on success.
+     */
+    if (result !== 1) {
+      console.error(
+        "[NSF] startTrack failed:",
+        index,
+        result
+      );
+
+      return false;
+    }
+
+    this.currentTrack = index;
+
+    /*
+     * Reset telemetry immediately when a new
+     * track starts.
+     */
+    this.voiceNotes =
+      new Array(this.voiceNames.length)
+        .fill(-1);
+
+    this.voiceLevels =
+      new Array(this.voiceNames.length)
+        .fill(0);
+
+    this.voiceDuties =
+      new Array(this.voiceNames.length)
+        .fill(-1);
+
+    return true;
+  },
+
+  /*
+   * Change track without starting playback
+   * through the audio worker.
+   *
+   * app.js uses this when PREV/NEXT is pressed.
+   */
+  setTrack(track) {
+    if (
+      !this.loaded ||
+      !window.LibGME ||
+      !window.LibGME.handle
+    ) {
+      return false;
+    }
+
+    const index = Number(track);
+
+    if (
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= this.trackCount
+    ) {
+      console.error(
+        "[NSF] Invalid track:",
+        track
+      );
+
+      return false;
+    }
+
+    const result =
+      window.LibGME.startTrack(index);
+
+    if (result !== 1) {
+      console.error(
+        "[NSF] setTrack failed:",
+        index,
+        result
+      );
+
+      return false;
+    }
+
+    this.currentTrack = index;
+
+    this.voiceNotes =
+      new Array(this.voiceNames.length)
+        .fill(-1);
+
+    this.voiceLevels =
+      new Array(this.voiceNames.length)
+        .fill(0);
+
+    this.voiceDuties =
+      new Array(this.voiceNames.length)
+        .fill(-1);
+
+    return true;
+  },
+
+  getTrackCount() {
+    return this.trackCount || 0;
+  },
+
+  getCurrentTrack() {
+    return this.currentTrack || 0;
+  },
+
+  /*
+   * Metadata used by player.js / app.js.
+   */
+  getInfo() {
+    const info = this.info || {};
+
+    return {
+      format: info.format || "NSF",
+      version:
+        info.version !== undefined
+          ? info.version
+          : null,
+
+      trackCount:
+        this.trackCount ||
+        info.trackCount ||
+        0,
+
+      startTrackIndex:
+        Number.isFinite(info.startTrackIndex)
+          ? info.startTrackIndex
+          : 0,
+
+      title: info.title || "",
+      artist: info.artist || "",
+      copyright: info.copyright || "",
+      ripper: info.ripper || "",
+
+      trackTitles:
+        Array.isArray(info.trackTitles)
+          ? info.trackTitles.slice()
+          : [],
+
+      trackArtists:
+        Array.isArray(info.trackArtists)
+          ? info.trackArtists.slice()
+          : [],
+
+      chip:
+        info.chip ||
+        "2A03"
+    };
+  },
+
+  getVoiceNames() {
+    return this.voiceNames.slice();
+  },
+
+  /*
+   * Current MIDI note for every voice.
+   *
+   * Telemetry errors are deliberately isolated
+   * from PCM playback.
+   */
+  getVoiceNotes() {
+    if (
+      !window.LibGME ||
+      typeof window.LibGME.getVoiceNotes !==
+        "function"
+    ) {
+      return this.voiceNotes.slice();
+    }
+
     try {
-      if (
-        window.NSFEngine &&
-        typeof NSFEngine.getVoiceDuties === "function"
-      ) {
-        const duties =
-          NSFEngine.getVoiceDuties();
+      const notes =
+        window.LibGME.getVoiceNotes();
 
-        this.updateVoiceDuties(duties);
+      if (
+        notes &&
+        typeof notes.length === "number"
+      ) {
+        this.voiceNotes =
+          Array.from(notes);
       }
     } catch (error) {
-      /*
-       * Duty telemetry is UI-only.
-       * Never allow a telemetry error to affect playback.
-       */
       console.warn(
-        "[APP] duty telemetry update failed:",
+        "[NSF] voice note telemetry failed:",
         error
       );
     }
 
-    window.setTimeout(poll, 100);
-  };
+    return this.voiceNotes.slice();
+  },
 
-  window.setTimeout(poll, 100);
-},
+  /*
+   * Normalized level for every voice.
+   */
+  getVoiceLevels(frameCount = 1) {
+    if (
+      !window.LibGME ||
+      typeof window.LibGME.getVoiceLevels !==
+        "function"
+    ) {
+      return this.voiceLevels.slice();
+    }
 
-updateVoiceLevels(levels) {
-  const values = Array.from(levels || []);
+    try {
+      const levels =
+        window.LibGME.getVoiceLevels(
+          frameCount
+        );
 
-  this.voiceTargetLevels = values.map(value =>
-    Math.max(0, Math.min(1, Number(value) || 0))
-  );
+      if (
+        levels &&
+        typeof levels.length === "number"
+      ) {
+        this.voiceLevels =
+          Array.from(levels);
+      }
+    } catch (error) {
+      console.warn(
+        "[NSF] voice level telemetry failed:",
+        error
+      );
+    }
 
-  if (this.voiceDisplayLevels.length !== this.voiceTargetLevels.length) {
-    this.voiceDisplayLevels = new Array(this.voiceTargetLevels.length).fill(0);
+    return this.voiceLevels.slice();
+  },
+
+  /*
+   * Current duty ratio for every voice.
+   *
+   * Examples:
+   *
+   *   0.125 = 12.5%
+   *   0.250 = 25%
+   *   0.375 = 37.5%
+   *   0.500 = 50%
+   *   0.625 = 62.5%
+   *   0.750 = 75%
+   *   0.875 = 87.5%
+   *   1.000 = 100%
+   *
+   * -1 means that the voice does not have
+   * a conventional pulse duty ratio.
+   */
+  getVoiceDuties() {
+    if (
+      !window.LibGME ||
+      typeof window.LibGME.getVoiceDuties !==
+        "function"
+    ) {
+      return this.voiceDuties.slice();
+    }
+
+    try {
+      const duties =
+        window.LibGME.getVoiceDuties();
+
+      if (
+        duties &&
+        typeof duties.length === "number"
+      ) {
+        this.voiceDuties =
+          Array.from(duties);
+      }
+    } catch (error) {
+      console.warn(
+        "[NSF] voice duty telemetry failed:",
+        error
+      );
+    }
+
+    return this.voiceDuties.slice();
+  },
+
+  /*
+   * Update all telemetry at approximately the
+   * same point in the audio timeline.
+   *
+   * IMPORTANT:
+   * This function must never generate PCM.
+   */
+  updateVoiceTelemetry(frameCount = 1) {
+    try {
+      this.getVoiceLevels(frameCount);
+    } catch (error) {
+      console.warn(
+        "[NSF] level telemetry update failed:",
+        error
+      );
+    }
+
+    try {
+      this.getVoiceNotes();
+    } catch (error) {
+      console.warn(
+        "[NSF] note telemetry update failed:",
+        error
+      );
+    }
+
+    try {
+      this.getVoiceDuties();
+    } catch (error) {
+      console.warn(
+        "[NSF] duty telemetry update failed:",
+        error
+      );
+    }
+  },
+
+  /*
+   * Convenience telemetry object.
+   */
+  getVoiceTelemetry(frameCount = 1) {
+    return {
+      names: this.getVoiceNames(),
+      notes: this.getVoiceNotes(),
+      levels: this.getVoiceLevels(
+        frameCount
+      ),
+      duties: this.getVoiceDuties()
+    };
+  },
+
+  /*
+   * PCM path.
+   *
+   * libgme returns signed 16-bit mono PCM.
+   * player.js / AudioWorklet expects Float32.
+   *
+   * IMPORTANT:
+   * No telemetry call is made here.
+   * Playback must remain independent from
+   * note/level/duty telemetry.
+   */
+  getFloatPCM(sampleCount) {
+    if (
+      !window.LibGME ||
+      !window.LibGME.handle ||
+      sampleCount <= 0
+    ) {
+      return new Float32Array(0);
+    }
+
+    const pcm =
+      window.LibGME.play(sampleCount);
+
+    if (
+      !pcm ||
+      typeof pcm.length !== "number"
+    ) {
+      return new Float32Array(0);
+    }
+
+    const output =
+      new Float32Array(pcm.length);
+
+    for (let i = 0; i < pcm.length; i++) {
+      output[i] =
+        Math.max(
+          -1,
+          Math.min(
+            1,
+            pcm[i] / 32768
+          )
+        );
+    }
+
+    return output;
+  },
+
+  /*
+   * Compatibility PCM method.
+   *
+   * Older code may call NSFEngine.play().
+   */
+  play(sampleCount) {
+    return this.getFloatPCM(sampleCount);
+  },
+
+  stop() {
+    if (
+      window.LibGME &&
+      typeof window.LibGME.stop ===
+        "function"
+    ) {
+      try {
+        window.LibGME.stop();
+      } catch (error) {
+        console.warn(
+          "[NSF] stop failed:",
+          error
+        );
+      }
+    }
+  },
+
+  unload() {
+    if (window.LibGME) {
+      try {
+        window.LibGME.close();
+      } catch (error) {
+        console.warn(
+          "[NSF] close failed:",
+          error
+        );
+      }
+    }
+
+    this.loaded = false;
+
+    this.currentTrack = 0;
+    this.trackCount = 0;
+
+    this.voiceNames = [];
+    this.voiceNotes = [];
+    this.voiceLevels = [];
+    this.voiceDuties = [];
+
+    this.info = null;
+  },
+
+  close() {
+    this.unload();
   }
-},
-
-animateVoiceMeters(now = performance.now()) {
-  const dt = Math.max(0.001, Math.min(0.1, (now - this.voiceAnimationTime) / 1000));
-  this.voiceAnimationTime = now;
-
-  const targets = this.voiceTargetLevels || [];
-
-  if (this.voiceDisplayLevels.length !== targets.length) {
-    this.voiceDisplayLevels = new Array(targets.length).fill(0);
-  }
-
-  // Fast attack, slower release: this makes each CH feel like a real
-  // hardware level meter instead of jumping between sampled values.
-  const attack = 1 - Math.exp(-dt / 0.035);
-  const release = 1 - Math.exp(-dt / 0.18);
-
-  for (let i = 0; i < targets.length; i++) {
-    const target = Math.max(0, Math.min(1, targets[i] || 0));
-    const current = this.voiceDisplayLevels[i] || 0;
-    const factor = target > current ? attack : release;
-
-    this.voiceDisplayLevels[i] =
-      current + (target - current) * factor;
-  }
-
-  if (this.voiceMeterList) {
-    this.voiceMeterList
-      .querySelectorAll(".voice-fill")
-      .forEach(fill => {
-        const index = Number(fill.dataset.voiceIndex);
-        const level = this.voiceDisplayLevels[index] || 0;
-        fill.style.width = `${Math.round(level * 1000) / 10}%`;
-      });
-
-    this.voiceMeterList
-      .querySelectorAll(".voice-db")
-      .forEach(db => {
-        const index = Number(db.dataset.voiceDbIndex);
-        const level = this.voiceDisplayLevels[index] || 0;
-
-        if (level <= 0.00001) {
-          db.textContent = "-∞ dB";
-          return;
-        }
-
-        const decibels = 20 * Math.log10(level);
-        db.textContent = `${decibels.toFixed(1)} dB`;
-      });
-  }
-
-  requestAnimationFrame(next => this.animateVoiceMeters(next));
-},
-
-clearVoiceLevels() {
-  this.voiceTargetLevels = new Array(
-    this.voiceDisplayLevels?.length || 0
-  ).fill(0);
-},
-
-
-updateInfo() {
-const info = NSFPlayer.getInfo();
-
-const trackIndex = NSFEngine.currentTrack || 0;
-
-const trackTitle =
-  Array.isArray(info.trackTitles)
-    ? info.trackTitles[trackIndex]
-    : "";
-
-const trackArtist =
-  Array.isArray(info.trackArtists)
-    ? info.trackArtists[trackIndex]
-    : "";
-
-document.getElementById("title").textContent =
-  trackTitle || info.title || "-";
-
-document.getElementById("composer").textContent =
-  trackArtist || info.artist || "-";
-
-document.getElementById("chip").textContent =
-  info.chip || "-";
-
-document.getElementById("copyright").textContent =
-  info.copyright || "-";
-
-document.getElementById("track").textContent =
-  info.trackCount
-    ? `${NSFEngine.currentTrack + 1} / ${info.trackCount}`
-    : "-";
-
-document.getElementById("extension").textContent =
-  info.format || "-";
-
-this.renderVoiceMeters();
-
-}
 };
 
-window.addEventListener(
-"load",
-() => App.init().catch(console.error)
-);
+window.NSFEngine = NSFEngine;
