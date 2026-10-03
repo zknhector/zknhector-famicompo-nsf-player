@@ -1,4 +1,7 @@
 const App = {
+keyboardStartNote: 12,
+keyboardEndNote: 127,
+voiceNotes: [],
 songs: [],
 currentSong: null,
 
@@ -58,7 +61,7 @@ if (!count || count <= 1) {
 }
 
 let track =
-  NSFEngine.currentTrack + direction;
+NSFEngine.currentTrack + direction;
 
 if (track < 0) {
   track = count - 1;
@@ -358,10 +361,17 @@ renderVoiceMeters() {
       this.voiceDuties[index]
     );
 
-    row.appendChild(label);
-    row.appendChild(bar);
-    row.appendChild(db);
-    row.appendChild(duty);
+    const head = document.createElement("div");
+    head.className = "voice-head";
+    head.appendChild(label);
+    head.appendChild(bar);
+    head.appendChild(db);
+    head.appendChild(duty);
+
+    const keyboard = this.createVoiceKeyboard(index);
+
+    row.appendChild(head);
+    row.appendChild(keyboard);
 
     this.voiceMeterList.appendChild(row);
   });
@@ -371,6 +381,147 @@ renderVoiceMeters() {
 
   this.clearVoiceLevels();
   this.updateVoiceDuties(this.voiceDuties);
+  this.updateVoiceNotes(this.voiceNotes);
+},
+
+createVoiceKeyboard(index) {
+  const keyboard = document.createElement("div");
+  keyboard.className = "voice-keyboard";
+  keyboard.dataset.voiceIndex = String(index);
+
+  const start = this.keyboardStartNote;
+  const end = this.keyboardEndNote;
+  const whiteNotes = [];
+  const blackNotes = [];
+  const blackPitchClasses = new Set([1, 3, 6, 8, 10]);
+
+  for (let note = start; note <= end; note++) {
+    if (blackPitchClasses.has(note % 12)) {
+      blackNotes.push(note);
+    } else {
+      whiteNotes.push(note);
+    }
+  }
+
+  const whiteCount = whiteNotes.length;
+
+  whiteNotes.forEach(note => {
+    const key = document.createElement("div");
+    key.className = "piano-key white";
+    key.dataset.note = String(note);
+    key.title = this.noteToName(note);
+    keyboard.appendChild(key);
+  });
+
+  blackNotes.forEach(note => {
+    const key = document.createElement("div");
+    key.className = "piano-key black";
+    key.dataset.note = String(note);
+    key.title = this.noteToName(note);
+
+    let whiteBefore = 0;
+
+    for (const whiteNote of whiteNotes) {
+      if (whiteNote >= note) break;
+      whiteBefore++;
+    }
+
+    const blackWidth = 1.45;
+    const whiteWidth = 100 / whiteCount;
+
+    key.style.left =
+      `${whiteBefore * whiteWidth - blackWidth / 2}%`;
+
+    keyboard.appendChild(key);
+  });
+
+  const current = document.createElement("div");
+  current.className = "keyboard-current";
+  current.dataset.voiceCurrentIndex = String(index);
+  current.textContent = "—";
+  keyboard.appendChild(current);
+
+  return keyboard;
+},
+
+noteToName(note) {
+  const value = Number(note);
+
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  const midi = Math.round(value);
+
+  const names = [
+    "C", "C#", "D", "D#", "E", "F",
+    "F#", "G", "G#", "A", "A#", "B"
+  ];
+
+  if (midi < 0 || midi > 127) {
+    return "—";
+  }
+
+  const octave = Math.floor(midi / 12) - 1;
+
+  return `${names[midi % 12]}${octave}`;
+},
+
+updateVoiceNotes(notes) {
+  const values = Array.from(notes || []);
+  this.voiceNotes = values;
+
+  if (!this.voiceMeterList) {
+    return;
+  }
+
+  this.voiceMeterList
+    .querySelectorAll(".voice-keyboard")
+    .forEach(keyboard => {
+      const index =
+        Number(keyboard.dataset.voiceIndex);
+
+      const noteValue =
+        Number(values[index]);
+
+      const hasNote =
+        Number.isFinite(noteValue) &&
+        noteValue >= this.keyboardStartNote &&
+        noteValue <= this.keyboardEndNote;
+
+      keyboard
+        .querySelectorAll(".piano-key.active")
+        .forEach(key =>
+          key.classList.remove("active")
+        );
+
+      const current =
+        keyboard.querySelector(".keyboard-current");
+
+      if (!hasNote) {
+        if (current) {
+          current.textContent = "—";
+        }
+
+        return;
+      }
+
+      const midi = Math.round(noteValue);
+
+      const key =
+        keyboard.querySelector(
+          `.piano-key[data-note="${midi}"]`
+        );
+
+      if (key) {
+        key.classList.add("active");
+      }
+
+      if (current) {
+        current.textContent =
+          this.noteToName(midi);
+      }
+    });
 },
 
 formatDuty(value) {
@@ -442,77 +593,147 @@ updateVoiceLevels(levels) {
   const values = Array.from(levels || []);
 
   this.voiceTargetLevels = values.map(value =>
-    Math.max(0, Math.min(1, Number(value) || 0))
+    Math.max(
+      0,
+      Math.min(1, Number(value) || 0)
+    )
   );
 
-  if (this.voiceDisplayLevels.length !== this.voiceTargetLevels.length) {
-    this.voiceDisplayLevels = new Array(this.voiceTargetLevels.length).fill(0);
+  if (
+    this.voiceDisplayLevels.length !==
+    this.voiceTargetLevels.length
+  ) {
+    this.voiceDisplayLevels =
+      new Array(
+        this.voiceTargetLevels.length
+      ).fill(0);
   }
 },
 
-animateVoiceMeters(now = performance.now()) {
-  const dt = Math.max(0.001, Math.min(0.1, (now - this.voiceAnimationTime) / 1000));
+animateVoiceMeters(
+  now = performance.now()
+) {
+  const dt =
+    Math.max(
+      0.001,
+      Math.min(
+        0.1,
+        (now - this.voiceAnimationTime) / 1000
+      )
+    );
+
   this.voiceAnimationTime = now;
 
-  const targets = this.voiceTargetLevels || [];
+  const targets =
+    this.voiceTargetLevels || [];
 
-  if (this.voiceDisplayLevels.length !== targets.length) {
-    this.voiceDisplayLevels = new Array(targets.length).fill(0);
+  if (
+    this.voiceDisplayLevels.length !==
+    targets.length
+  ) {
+    this.voiceDisplayLevels =
+      new Array(targets.length).fill(0);
   }
 
-  // Fast attack, slower release: this makes each CH feel like a real
-  // hardware level meter instead of jumping between sampled values.
-  const attack = 1 - Math.exp(-dt / 0.035);
-  const release = 1 - Math.exp(-dt / 0.18);
+  const attack =
+    1 - Math.exp(-dt / 0.035);
 
-  for (let i = 0; i < targets.length; i++) {
-    const target = Math.max(0, Math.min(1, targets[i] || 0));
-    const current = this.voiceDisplayLevels[i] || 0;
-    const factor = target > current ? attack : release;
+  const release =
+    1 - Math.exp(-dt / 0.18);
+
+  for (
+    let i = 0;
+    i < targets.length;
+    i++
+  ) {
+    const target =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          targets[i] || 0
+        )
+      );
+
+    const current =
+      this.voiceDisplayLevels[i] || 0;
+
+    const factor =
+      target > current
+        ? attack
+        : release;
 
     this.voiceDisplayLevels[i] =
-      current + (target - current) * factor;
+      current +
+      (target - current) *
+      factor;
   }
 
   if (this.voiceMeterList) {
     this.voiceMeterList
       .querySelectorAll(".voice-fill")
       .forEach(fill => {
-        const index = Number(fill.dataset.voiceIndex);
-        const level = this.voiceDisplayLevels[index] || 0;
-        fill.style.width = `${Math.round(level * 1000) / 10}%`;
+        const index =
+          Number(
+            fill.dataset.voiceIndex
+          );
+
+        const level =
+          this.voiceDisplayLevels[index] || 0;
+
+        fill.style.width =
+          `${Math.round(level * 1000) / 10}%`;
       });
 
     this.voiceMeterList
       .querySelectorAll(".voice-db")
       .forEach(db => {
-        const index = Number(db.dataset.voiceDbIndex);
-        const level = this.voiceDisplayLevels[index] || 0;
+        const index =
+          Number(
+            db.dataset.voiceDbIndex
+          );
+
+        const level =
+          this.voiceDisplayLevels[index] || 0;
 
         if (level <= 0.00001) {
           db.textContent = "-∞ dB";
           return;
         }
 
-        const decibels = 20 * Math.log10(level);
-        db.textContent = `${decibels.toFixed(1)} dB`;
+        const decibels =
+          20 * Math.log10(level);
+
+        db.textContent =
+          `${decibels.toFixed(1)} dB`;
       });
   }
 
-  requestAnimationFrame(next => this.animateVoiceMeters(next));
+  requestAnimationFrame(
+    next =>
+      this.animateVoiceMeters(next)
+  );
 },
 
 clearVoiceLevels() {
-  this.voiceTargetLevels = new Array(
-    this.voiceDisplayLevels?.length || 0
-  ).fill(0);
+  this.voiceTargetLevels =
+    new Array(
+      this.voiceDisplayLevels?.length || 0
+    ).fill(0);
+
+  this.updateVoiceNotes(
+    new Array(
+      this.voiceDisplayLevels?.length || 0
+    ).fill(-1)
+  );
 },
 
 
 updateInfo() {
 const info = NSFPlayer.getInfo();
 
-const trackIndex = NSFEngine.currentTrack || 0;
+const trackIndex =
+  NSFEngine.currentTrack || 0;
 
 const trackTitle =
   Array.isArray(info.trackTitles)
@@ -548,6 +769,11 @@ this.renderVoiceMeters();
 
 }
 };
+
+/*
+ * player.js uses window.App for live UI telemetry.
+ */
+window.App = App;
 
 window.addEventListener(
 "load",
