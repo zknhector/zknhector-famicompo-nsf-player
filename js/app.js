@@ -12,8 +12,58 @@ const App = {
     this.songs = [...NSFLibrary.songs];
 
     this.bindUI();
+    this.initDateTime();
     this.initVisualizer();
     this.render();
+  },
+
+  /*
+   * Header date/time display.
+   * The clock is UI-only and independent from audio playback.
+   */
+  initDateTime() {
+    const dateElement =
+      document.getElementById("current-date");
+
+    const timeElement =
+      document.getElementById("current-time");
+
+    if (!dateElement || !timeElement) {
+      return;
+    }
+
+    const update = () => {
+      const now = new Date();
+
+      dateElement.textContent =
+        now.toLocaleDateString(
+          "ja-JP",
+          {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            weekday: "short"
+          }
+        );
+
+      timeElement.textContent =
+        now.toLocaleTimeString(
+          "ja-JP",
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false
+          }
+        );
+    };
+
+    update();
+
+    window.setInterval(
+      update,
+      1000
+    );
   },
 
   bindUI() {
@@ -519,8 +569,10 @@ const App = {
           "voice-name";
 
         label.textContent =
-          name ||
-          `CH ${index + 1}`;
+          this.getDisplayVoiceName(
+            index,
+            name
+          );
 
         const bar =
           document.createElement("div");
@@ -609,6 +661,59 @@ const App = {
 
     this.updateVoiceNotes(
       this.voiceNotes
+    );
+  },
+
+  /*
+   * Make the channel role explicit instead of relying on the
+   * short names returned by libgme.
+   *
+   * Voice order is the same fixed expansion-source order used by
+   * the bridge: 2A03, VRC6, N163, FME7, FDS, MMC5, VRC7.
+   */
+  getDisplayVoiceName(index, fallbackName) {
+    const names = [
+      "2A03-Square1",
+      "2A03-Square2",
+      "2A03-Triangle",
+      "2A03-Noise",
+      "2A03-DPCM",
+
+      "VRC6-Pulse1",
+      "VRC6-Pulse2",
+      "VRC6-Sawtooth",
+
+      "N163-Wave1",
+      "N163-Wave2",
+      "N163-Wave3",
+      "N163-Wave4",
+      "N163-Wave5",
+      "N163-Wave6",
+      "N163-Wave7",
+      "N163-Wave8",
+
+      "FME7-Tone1",
+      "FME7-Tone2",
+      "FME7-Tone3",
+
+      "FDS-Wave",
+
+      "MMC5-Square1",
+      "MMC5-Square2",
+      "MMC5-DPCM",
+
+      "VRC7-OPLL1",
+      "VRC7-OPLL2",
+      "VRC7-OPLL3",
+      "VRC7-OPLL4",
+      "VRC7-OPLL5",
+      "VRC7-OPLL6"
+    ];
+
+    return (
+      names[index] ||
+      fallbackName ||
+      `CH ${index + 1}`
     );
   },
 
