@@ -234,13 +234,121 @@ main {
 }
 
 .voice-row {
+    --source-color: #23d7ff;
+    --source-soft: rgba(35, 215, 255, 0.18);
+    --source-glow: rgba(35, 215, 255, 0.45);
+
     min-width: 0;
     padding: 7px 4px 8px;
     margin-bottom: 5px;
-    background: #07070d;
-    border-left: 3px solid #23d7ff;
+    background:
+        linear-gradient(
+            90deg,
+            var(--source-soft) 0%,
+            rgba(7, 7, 13, 0.96) 16%,
+            #07070d 42%
+        );
+    border-left: 3px solid var(--source-color);
     border-bottom: 1px solid #1c2435;
+    box-shadow:
+        inset 0 0 10px rgba(0, 0, 0, 0.45),
+        0 0 8px var(--source-soft);
 }
+
+/* =========================================
+   SOURCE COLORS
+   2A03 / VRC6 / N163 / FME7 / FDS / MMC5 / VRC7
+   ========================================= */
+
+.voice-row:nth-child(-n+5) {
+    --source-color: #4da6ff;
+    --source-soft: rgba(77, 166, 255, 0.16);
+    --source-glow: rgba(77, 166, 255, 0.45);
+}
+
+.voice-row:nth-child(n+6):nth-child(-n+8) {
+    --source-color: #c77dff;
+    --source-soft: rgba(199, 125, 255, 0.16);
+    --source-glow: rgba(199, 125, 255, 0.45);
+}
+
+.voice-row:nth-child(n+9):nth-child(-n+16) {
+    --source-color: #5cff8d;
+    --source-soft: rgba(92, 255, 141, 0.15);
+    --source-glow: rgba(92, 255, 141, 0.42);
+}
+
+.voice-row:nth-child(n+17):nth-child(-n+19) {
+    --source-color: #ffd84d;
+    --source-soft: rgba(255, 216, 77, 0.15);
+    --source-glow: rgba(255, 216, 77, 0.42);
+}
+
+.voice-row:nth-child(20) {
+    --source-color: #72e7ff;
+    --source-soft: rgba(114, 231, 255, 0.16);
+    --source-glow: rgba(114, 231, 255, 0.45);
+}
+
+.voice-row:nth-child(n+21):nth-child(-n+23) {
+    --source-color: #ff5b68;
+    --source-soft: rgba(255, 91, 104, 0.15);
+    --source-glow: rgba(255, 91, 104, 0.44);
+}
+
+.voice-row:nth-child(n+24):nth-child(-n+29) {
+    --source-color: #ff9f43;
+    --source-soft: rgba(255, 159, 67, 0.16);
+    --source-glow: rgba(255, 159, 67, 0.46);
+}
+
+.voice-row .voice-name {
+    color: var(--source-color);
+    text-shadow: 0 0 5px var(--source-soft);
+}
+
+.voice-row .voice-bar {
+    border-color: color-mix(in srgb, var(--source-color) 42%, #303030);
+    box-shadow:
+        inset 0 0 5px #000,
+        0 0 4px var(--source-soft);
+}
+
+.voice-row .voice-fill {
+    background:
+        linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--source-color) 68%, #39ff88) 0%,
+            var(--source-color) 72%,
+            #fff0f0 100%
+        );
+    box-shadow: 0 0 5px var(--source-glow);
+}
+
+.voice-row .voice-note {
+    color: var(--source-color);
+    text-shadow: 0 0 5px var(--source-soft);
+}
+
+.voice-row .voice-keyboard {
+    border-color: color-mix(in srgb, var(--source-color) 45%, #292929);
+    box-shadow:
+        inset 0 0 8px #000,
+        0 0 5px var(--source-soft);
+}
+
+.voice-row .voice-keyboard::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    z-index: 1;
+    background: var(--source-color);
+    box-shadow: 0 0 6px var(--source-glow);
+}
+
 
 .voice-head {
     display: grid;
@@ -324,7 +432,9 @@ main {
 
 .piano-key.active {
     background: #ff3b30 !important;
-    box-shadow: inset 0 0 0 1px #fff, 0 0 7px rgba(255,59,48,.85);
+    box-shadow:
+        inset 0 0 0 1px #fff,
+        0 0 7px rgba(255,59,48,.85);
 }
 
 .piano-key.black.active {
