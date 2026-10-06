@@ -62,6 +62,7 @@ em++ -O3 \
     "_nsf_bridge_voice_levels",
     "_nsf_bridge_voice_notes",
     "_nsf_bridge_voice_duty",
+    "_nsf_bridge_voice_sources",
     "_nsf_bridge_multi_channel"
   ]' \
   -sEXPORTED_RUNTIME_METHODS='[
