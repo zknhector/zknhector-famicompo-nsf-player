@@ -562,6 +562,17 @@ const App = {
         row.className =
           "voice-row";
 
+        const sourceInfo =
+          this.getVoiceSourceInfo(
+            index,
+            name
+          );
+
+        this.applyVoiceSourceStyle(
+          row,
+          sourceInfo.source
+        );
+
         const label =
           document.createElement("div");
 
@@ -569,10 +580,16 @@ const App = {
           "voice-name";
 
         label.textContent =
-          this.getDisplayVoiceName(
-            index,
-            name
-          );
+          sourceInfo.label;
+
+        console.log(
+          `[APP][VOICE MAP] CH${index + 1}:`,
+          sourceInfo.raw || "(no name)",
+          "=>",
+          sourceInfo.source,
+          "=>",
+          sourceInfo.label
+        );
 
         const bar =
           document.createElement("div");
@@ -665,56 +682,211 @@ const App = {
   },
 
   /*
-   * Make the channel role explicit instead of relying on the
-   * short names returned by libgme.
+   * Determine the real sound-source family from the voice name returned
+   * by libgme.
    *
-   * Voice order is the same fixed expansion-source order used by
-   * the bridge: 2A03, VRC6, N163, FME7, FDS, MMC5, VRC7.
+   * IMPORTANT:
+   * libgme does NOT return a fixed 29-channel list. Only chips that are
+   * actually present in the loaded NSF contribute voices. Therefore a
+   * global index table such as "1-5 = 2A03, 6-8 = VRC6" becomes wrong as
+   * soon as an NSF omits one of the expansion chips.
    */
-  getDisplayVoiceName(index, fallbackName) {
-    const names = [
-      "2A03-Square1",
-      "2A03-Square2",
-      "2A03-Triangle",
-      "2A03-Noise",
-      "2A03-DPCM",
+  getVoiceSourceInfo(index, fallbackName) {
+    const raw =
+      String(fallbackName || "")
+        .trim();
 
-      "VRC6-Pulse1",
-      "VRC6-Pulse2",
-      "VRC6-Sawtooth",
+    const text =
+      raw.toLowerCase()
+        .replace(/[‐‑‒–—―]/g, "-");
 
-      "N163-Wave1",
-      "N163-Wave2",
-      "N163-Wave3",
-      "N163-Wave4",
-      "N163-Wave5",
-      "N163-Wave6",
-      "N163-Wave7",
-      "N163-Wave8",
+    let source = "UNKNOWN";
 
-      "FME7-Tone1",
-      "FME7-Tone2",
-      "FME7-Tone3",
+    if (/vrc7|opll/.test(text)) {
+      source = "VRC7";
+    } else if (/vrc6/.test(text)) {
+      source = "VRC6";
+    } else if (/n163|namco.?106|namco/.test(text)) {
+      source = "N163";
+    } else if (/fme.?7|sunsoft/.test(text)) {
+      source = "FME7";
+    } else if (/fds|disk.?system/.test(text)) {
+      source = "FDS";
+    } else if (/mmc5/.test(text)) {
+      source = "MMC5";
+    } else if (
+      /2a03|rp2a03|dpcm|dmc|triangle|noise|square/.test(text)
+    ) {
+      source = "2A03";
+    }
 
-      "FDS-Wave",
+    return {
+      source,
+      raw,
+      label: this.getNormalizedVoiceName(
+        source,
+        raw,
+        index
+      )
+    };
+  },
 
-      "MMC5-Square1",
-      "MMC5-Square2",
-      "MMC5-DPCM",
+  /*
+   * Convert libgme's channel name into a compact, consistent UI label.
+   * The source is taken from the actual voice name; the global CH index
+   * is used only as a final fallback and never as the source classifier.
+   */
+  getNormalizedVoiceName(source, raw, index) {
+    if (!raw) {
+      return `CH ${index + 1}`;
+    }
 
-      "VRC7-OPLL1",
-      "VRC7-OPLL2",
-      "VRC7-OPLL3",
-      "VRC7-OPLL4",
-      "VRC7-OPLL5",
-      "VRC7-OPLL6"
-    ];
+    const text = raw.toLowerCase();
 
-    return (
-      names[index] ||
-      fallbackName ||
-      `CH ${index + 1}`
+    const numberMatch =
+      text.match(
+        /(?:channel|ch|square|pulse|wave|tone|opll)[\s_-]*(\d+)/i
+      );
+
+    const number =
+      numberMatch
+        ? Number(numberMatch[1])
+        : null;
+
+    if (source === "2A03") {
+      if (/triangle/.test(text)) {
+        return "2A03-Triangle";
+      }
+      if (/noise/.test(text)) {
+        return "2A03-Noise";
+      }
+      if (/dpcm|dmc/.test(text)) {
+        return "2A03-DPCM";
+      }
+      if (/square.*2|square_?2|sq2/.test(text)) {
+        return "2A03-Square2";
+      }
+      if (/square.*1|square_?1|sq1/.test(text)) {
+        return "2A03-Square1";
+      }
+    }
+
+    if (source === "VRC6") {
+      if (/saw/.test(text)) {
+        return "VRC6-Sawtooth";
+      }
+      if (/pulse.*2|pulse_?2/.test(text)) {
+        return "VRC6-Pulse2";
+      }
+      if (/pulse.*1|pulse_?1/.test(text)) {
+        return "VRC6-Pulse1";
+      }
+    }
+
+    if (source === "N163") {
+      return number
+        ? `N163-Wave${number}`
+        : raw;
+    }
+
+    if (source === "FME7") {
+      return number
+        ? `FME7-Tone${number}`
+        : raw;
+    }
+
+    if (source === "FDS") {
+      return "FDS-Wave";
+    }
+
+    if (source === "MMC5") {
+      if (/dpcm|dmc/.test(text)) {
+        return "MMC5-DPCM";
+      }
+      if (/square.*2|square_?2/.test(text)) {
+        return "MMC5-Square2";
+      }
+      if (/square.*1|square_?1/.test(text)) {
+        return "MMC5-Square1";
+      }
+    }
+
+    if (source === "VRC7") {
+      return number
+        ? `VRC7-OPLL${number}`
+        : raw;
+    }
+
+    return raw;
+  },
+
+  /*
+   * Apply the same source identity to the row that the channel name uses.
+   * This intentionally overrides the old nth-child CSS rules without
+   * changing style.css, so the stable keyboard/layout CSS remains intact.
+   */
+  applyVoiceSourceStyle(row, source) {
+    const styles = {
+      "2A03": {
+        color: "#4da6ff",
+        soft: "rgba(77, 166, 255, 0.16)",
+        glow: "rgba(77, 166, 255, 0.45)"
+      },
+      "VRC6": {
+        color: "#c77dff",
+        soft: "rgba(199, 125, 255, 0.16)",
+        glow: "rgba(199, 125, 255, 0.45)"
+      },
+      "N163": {
+        color: "#5cff8d",
+        soft: "rgba(92, 255, 141, 0.15)",
+        glow: "rgba(92, 255, 141, 0.42)"
+      },
+      "FME7": {
+        color: "#ffd84d",
+        soft: "rgba(255, 216, 77, 0.15)",
+        glow: "rgba(255, 216, 77, 0.42)"
+      },
+      "FDS": {
+        color: "#72e7ff",
+        soft: "rgba(114, 231, 255, 0.16)",
+        glow: "rgba(114, 231, 255, 0.45)"
+      },
+      "MMC5": {
+        color: "#ff5b68",
+        soft: "rgba(255, 91, 104, 0.15)",
+        glow: "rgba(255, 91, 104, 0.44)"
+      },
+      "VRC7": {
+        color: "#ff9f43",
+        soft: "rgba(255, 159, 67, 0.16)",
+        glow: "rgba(255, 159, 67, 0.46)"
+      }
+    };
+
+    const style = styles[source];
+
+    if (!style) {
+      row.dataset.source = "UNKNOWN";
+      return;
+    }
+
+    row.style.setProperty(
+      "--source-color",
+      style.color
     );
+
+    row.style.setProperty(
+      "--source-soft",
+      style.soft
+    );
+
+    row.style.setProperty(
+      "--source-glow",
+      style.glow
+    );
+
+    row.dataset.source = source;
   },
 
   createVoiceKeyboard(index) {
