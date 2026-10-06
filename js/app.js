@@ -702,6 +702,9 @@ const App = {
 
     let source = "UNKNOWN";
 
+    /*
+     * First prefer an explicit source name from libgme.
+     */
     if (/vrc7|opll/.test(text)) {
       source = "VRC7";
     } else if (/vrc6/.test(text)) {
@@ -718,6 +721,61 @@ const App = {
       /2a03|rp2a03|dpcm|dmc|triangle|noise|square/.test(text)
     ) {
       source = "2A03";
+    }
+
+    /*
+     * Some libgme builds return generic names such as "Wave 1" and
+     * "FM 1".  In that case the voice name alone cannot identify the
+     * chip.  Use the NSF metadata chip string to reconstruct the actual
+     * active-source ranges in the same order as the bridge.
+     */
+    if (source === "UNKNOWN") {
+      let info = {};
+
+      try {
+        info =
+          typeof NSFEngine.getInfo === "function"
+            ? NSFEngine.getInfo() || {}
+            : {};
+      } catch (error) {
+        info = {};
+      }
+
+      const chipText = [
+        info.chip,
+        info.system,
+        info.format
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const has = pattern =>
+        pattern.test(chipText);
+
+      const sources = [
+        { source: "VRC6", count: 3, present: has(/vrc6/) },
+        { source: "N163", count: 8, present: has(/n163|namco.?106|namco/) },
+        { source: "FME7", count: 3, present: has(/fme.?7|sunsoft/) },
+        { source: "FDS", count: 1, present: has(/fds|disk.?system/) },
+        { source: "MMC5", count: 3, present: has(/mmc5/) },
+        { source: "VRC7", count: 6, present: has(/vrc7|opll|ym2413/) }
+      ];
+
+      let cursor = 5;
+
+      for (const item of sources) {
+        if (!item.present) {
+          continue;
+        }
+
+        if (index >= cursor && index < cursor + item.count) {
+          source = item.source;
+          break;
+        }
+
+        cursor += item.count;
+      }
     }
 
     return {
@@ -786,7 +844,7 @@ const App = {
     if (source === "N163") {
       return number
         ? `N163-Wave${number}`
-        : raw;
+        : raw.replace(/^wave\s*/i, "N163-Wave");
     }
 
     if (source === "FME7") {
@@ -814,7 +872,7 @@ const App = {
     if (source === "VRC7") {
       return number
         ? `VRC7-OPLL${number}`
-        : raw;
+        : raw.replace(/^fm\s*/i, "VRC7-OPLL");
     }
 
     return raw;
