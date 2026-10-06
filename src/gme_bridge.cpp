@@ -547,6 +547,40 @@ static int read_nsf_internal_levels(
  *
  *   RP2A03 -> VRC6 -> N163 -> FME7 -> FDS -> MMC5 -> VRC7
  */
+static int read_nsf_internal_sources(
+    Nsf_Emu* nsf,
+    int* sources,
+    int max_sources
+) {
+    if (!nsf || !sources || max_sources <= 0) return 0;
+    int out = 0;
+    Nes_Apu* apu = nsf->apu_();
+    if (!apu) return 0;
+
+    /* Source IDs: 1=2A03, 2=VRC6, 3=N163, 4=FME7,
+       5=FDS, 6=MMC5, 7=VRC7. */
+    for (int i = 0; i < Nes_Apu::osc_count && out < max_sources; ++i)
+        sources[out++] = 1;
+    if (nsf->vrc6)
+        for (int i = 0; i < Nes_Vrc6_Apu::osc_count && out < max_sources; ++i)
+            sources[out++] = 2;
+    if (nsf->namco)
+        for (int i = 0; i < Nes_Namco_Apu::osc_count && out < max_sources; ++i)
+            sources[out++] = 3;
+    if (nsf->fme7)
+        for (int i = 0; i < Nes_Fme7_Apu::osc_count && out < max_sources; ++i)
+            sources[out++] = 4;
+    if (nsf->fds && out < max_sources)
+        sources[out++] = 5;
+    if (nsf->mmc5)
+        for (int i = 0; i < 3 && out < max_sources; ++i)
+            sources[out++] = 6;
+    if (nsf->vrc7)
+        for (int i = 0; i < Nes_Vrc7_Apu::osc_count && out < max_sources; ++i)
+            sources[out++] = 7;
+    return out;
+}
+
 static int read_nsf_internal_duties(
     Nsf_Emu* nsf,
     float* duties,
@@ -1077,6 +1111,18 @@ int nsf_bridge_voice_levels(
  * -1.0 means that the voice does not have a conventional
  * pulse duty ratio.
  */
+int nsf_bridge_voice_sources(
+    int handle,
+    int* sources
+) {
+    BridgeHandle* h = get_handle(handle);
+    if (!h || !h->meter_emu || !sources || h->voice_count <= 0) return 0;
+    Nsf_Emu* nsf = static_cast<Nsf_Emu*>(h->meter_emu);
+    if (!nsf) return 0;
+    for (int i = 0; i < h->voice_count; ++i) sources[i] = 0;
+    return read_nsf_internal_sources(nsf, sources, h->voice_count) == h->voice_count ? 1 : 0;
+}
+
 int nsf_bridge_voice_duty(
     int handle,
     float* duties
