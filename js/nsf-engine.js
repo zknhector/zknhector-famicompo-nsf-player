@@ -9,6 +9,7 @@ const NSFEngine = {
   voiceNotes: [],
   voiceLevels: [],
   voiceDuties: [],
+  voiceSources: [],
 
   info: null,
 
@@ -170,6 +171,69 @@ const NSFEngine = {
 
     this.voiceNames =
       window.LibGME.getVoiceNames() || [];
+
+    /*
+     * Get the actual sound-source family for every
+     * voice. Source IDs are supplied by the native
+     * bridge and use the same order as voiceNames.
+     *
+     *   1 = 2A03
+     *   2 = VRC6
+     *   3 = N163
+     *   4 = FME7
+     *   5 = FDS
+     *   6 = MMC5
+     *   7 = VRC7
+     *
+     * Telemetry failure must never prevent playback.
+     */
+    try {
+      if (
+        typeof window.LibGME.getVoiceSources ===
+        "function"
+      ) {
+        this.voiceSources =
+          Array.from(
+            window.LibGME.getVoiceSources() || []
+          );
+      } else {
+        this.voiceSources = [];
+      }
+    } catch (error) {
+      console.warn(
+        "[NSF] voice source telemetry failed:",
+        error
+      );
+
+      this.voiceSources = [];
+    }
+
+    /*
+     * Keep the source array aligned with the voice
+     * array. Missing entries are represented by 0,
+     * which means "unknown / use fallback detection".
+     */
+    if (
+      this.voiceSources.length <
+      this.voiceNames.length
+    ) {
+      this.voiceSources =
+        this.voiceSources.concat(
+          new Array(
+            this.voiceNames.length -
+            this.voiceSources.length
+          ).fill(0)
+        );
+    } else if (
+      this.voiceSources.length >
+      this.voiceNames.length
+    ) {
+      this.voiceSources =
+        this.voiceSources.slice(
+          0,
+          this.voiceNames.length
+        );
+    }
 
     this.voiceNotes =
       new Array(this.voiceNames.length)
@@ -340,6 +404,22 @@ const NSFEngine = {
   },
 
   /*
+   * Actual sound-source family for every voice.
+   *
+   * Source IDs:
+   *   1 = 2A03
+   *   2 = VRC6
+   *   3 = N163
+   *   4 = FME7
+   *   5 = FDS
+   *   6 = MMC5
+   *   7 = VRC7
+   */
+  getVoiceSources() {
+    return this.voiceSources.slice();
+  },
+
+  /*
    * Current MIDI note for every voice.
    *
    * Telemetry errors must never stop playback.
@@ -499,6 +579,9 @@ const NSFEngine = {
       names:
         this.getVoiceNames(),
 
+      sources:
+        this.getVoiceSources(),
+
       notes:
         this.getVoiceNotes(),
 
@@ -612,6 +695,7 @@ const NSFEngine = {
     this.voiceNotes = [];
     this.voiceLevels = [];
     this.voiceDuties = [];
+    this.voiceSources = [];
 
     this.info = null;
   },
